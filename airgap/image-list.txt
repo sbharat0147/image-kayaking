@@ -1,0 +1,14 @@
+# Pinned Docker image list — every image required by the DC/DR stack.
+# Format: <image>  <save-as-filename>
+# Versions are pinned so the airgap bundle is reproducible.
+#
+# To update a version: change it here, re-run bundle-build.sh.
+
+bitnami/etcd:3.5                                           etcd-3.5.tar
+patroni/patroni:3.3.0                                      patroni-3.3.0.tar
+minio/minio:RELEASE.2024-06-13T22-53-53Z                   minio-2024-06-13.tar
+minio/mc:RELEASE.2024-06-13T22-53-53Z                      mc-2024-06-13.tar
+prom/prometheus:v2.52.0                                    prometheus-v2.52.0.tar
+prom/alertmanager:v0.27.0                                  alertmanager-v0.27.0.tar
+grafana/grafana-oss:11.0.0                                 grafana-oss-11.0.0.tar
+prometheuscommunity/postgres-exporter:v0.15.0              postgres-exporter-v0.15.0.tar

@@ -1,0 +1,29 @@
+# Airgap overlay for DC2 — mirrors the DC1 overlay.
+# Apply with:
+#   docker compose \
+#     -f docker-compose.dc2.yml \
+#     -f ../../airgap/patches/docker-compose.dc2.airgap.yml \
+#     --env-file .env up -d
+
+version: "3.9"
+
+services:
+  etcd:
+    pull_policy: never
+    restart: on-failure:5
+
+  postgres-patroni:
+    pull_policy: never
+    restart: on-failure:5
+
+  minio:
+    pull_policy: never
+    restart: on-failure:5
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"

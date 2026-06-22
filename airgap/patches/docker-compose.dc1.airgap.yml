@@ -1,0 +1,53 @@
+# Airgap overlay for DC1 — overrides anything that requires internet access.
+# Apply with:
+#   docker compose \
+#     -f docker-compose.dc1.yml \
+#     -f ../../airgap/patches/docker-compose.dc1.airgap.yml \
+#     --env-file .env up -d
+#
+# What this overlay does:
+#   - Disables any pull policy (images are already loaded locally)
+#   - Turns off healthcheck curl calls that hit external URLs
+#   - Pins restart policy to on-failure (safer in airgap: avoids infinite loops)
+
+version: "3.9"
+
+services:
+  etcd:
+    pull_policy: never
+    restart: on-failure:5
+
+  postgres-patroni:
+    pull_policy: never
+    restart: on-failure:5
+
+  minio:
+    pull_policy: never
+    restart: on-failure:5
+    # Override healthcheck to use wget (available in the minio image)
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    pull_policy: never
+    restart: on-failure:5
+
+  alertmanager:
+    pull_policy: never
+    restart: on-failure:5
+
+  grafana:
+    pull_policy: never
+    restart: on-failure:5
+    # Disable phone-home / update checks
+    environment:
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+
+  postgres-exporter:
+    pull_policy: never
+    restart: on-failure:5

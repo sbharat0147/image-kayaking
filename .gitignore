@@ -6,3 +6,7 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Airgap build artifacts — never commit these (can be multi-GB)
+airgap/bundle/
+airgap/*.tar.gz
