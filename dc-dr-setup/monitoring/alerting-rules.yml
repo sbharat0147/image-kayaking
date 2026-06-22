@@ -1,0 +1,47 @@
+groups:
+  - name: postgresql
+    rules:
+      - alert: PostgreSQLReplicaLag
+        expr: pg_replication_lag_seconds > 60
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PG replica lag > 60s on {{ $labels.dc }}"
+          description: "Replication lag is {{ $value }}s. DC2 may be behind."
+
+      - alert: PostgreSQLReplicaDown
+        expr: absent(pg_replication_lag_seconds{dc="dc2"})
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DC2 PostgreSQL replica is unreachable"
+          description: "postgres_exporter on DC2 is not reporting. Check DC2 PG."
+
+      - alert: PatroniNoLeader
+        expr: patroni_master == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "No Patroni leader elected in pg-cluster"
+
+  - name: minio
+    rules:
+      - alert: MinIOReplicationErrors
+        expr: increase(minio_replication_failed_count[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MinIO replication failures on {{ $labels.dc }}"
+          description: "{{ $value }} replication failures in last 5 min."
+
+      - alert: MinIODown
+        expr: absent(minio_cluster_health_status)
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO instance is down ({{ $labels.dc }})"
