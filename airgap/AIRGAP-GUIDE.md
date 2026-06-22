@@ -87,11 +87,21 @@ bash bundle-build.sh
 Output: `airgap/airgap-bundle-<YYYYMMDD>.tar.gz`
 
 The script:
-1. Pulls every image in `image-list.txt` (pinned versions).
-2. Saves each as a `.tar` file.
-3. Copies all project configs (no secrets — `.env` is excluded).
-4. Writes `images.sha256` checksums.
-5. Packs everything into one `.tar.gz`.
+1. **Builds** the Patroni image locally from `dc-dr-setup/patroni/Dockerfile`
+   (tagged `local/patroni:3.3.0`). Patroni has no official Docker Hub image.
+2. Pulls every other image in `image-list.txt` (pinned versions, all verified).
+3. Saves each as a `.tar` file.
+4. Copies all project configs (no secrets — `.env` is excluded).
+5. Writes `images.sha256` checksums.
+6. Packs everything into one `.tar.gz`.
+
+### Why these registries?
+
+| Image | Registry | Reason |
+|-------|----------|--------|
+| Patroni | Built locally | No official image exists on Docker Hub |
+| etcd | `gcr.io/etcd-development` | `bitnami/etcd` is delisted from Docker Hub |
+| Everything else | Docker Hub | Standard public images |
 
 ---
 

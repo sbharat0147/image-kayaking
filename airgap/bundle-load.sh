@@ -103,7 +103,7 @@ sudo tee "${MC_WRAPPER}" > /dev/null <<'WRAPPER'
 exec docker run --rm -it \
     --network host \
     -v "${HOME}/.mc:/root/.mc" \
-    "minio/mc:RELEASE.2024-06-13T22-53-53Z" "$@"
+    "minio/mc:RELEASE.2025-05-21T01-59-54Z" "$@"
 WRAPPER
 sudo chmod +x "${MC_WRAPPER}"
 echo "  mc wrapper written to ${MC_WRAPPER}"

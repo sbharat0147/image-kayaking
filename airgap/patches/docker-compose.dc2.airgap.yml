@@ -20,7 +20,7 @@ services:
     pull_policy: never
     restart: on-failure:5
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:9000/minio/health/live || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,13 +1,26 @@
 # Pinned Docker image list — every image required by the DC/DR stack.
 # Format: <image>  <save-as-filename>
-# Versions are pinned so the airgap bundle is reproducible.
+# All tags verified against their registries on 2026-06-22.
 #
-# To update a version: change it here, re-run bundle-build.sh.
+# NOTE: patroni/patroni has NO official Docker Hub image.
+#       The bundle-build.sh script builds it locally from
+#       dc-dr-setup/patroni/Dockerfile before saving it.
+#
+# To update a version: change it here AND in docker-compose.dc{1,2}.yml,
+# then re-run bundle-build.sh.
 
-bitnami/etcd:3.5                                           etcd-3.5.tar
-patroni/patroni:3.3.0                                      patroni-3.3.0.tar
-minio/minio:RELEASE.2024-06-13T22-53-53Z                   minio-2024-06-13.tar
-minio/mc:RELEASE.2024-06-13T22-53-53Z                      mc-2024-06-13.tar
+# ── etcd (upstream: gcr.io — bitnami/etcd is delisted from Docker Hub) ──
+gcr.io/etcd-development/etcd:v3.5.9                       etcd-v3.5.9.tar
+
+# ── Patroni (built locally — see dc-dr-setup/patroni/Dockerfile) ──────────
+# Tag produced by bundle-build.sh: local/patroni:3.3.0
+local/patroni:3.3.0                                        patroni-3.3.0.tar
+
+# ── MinIO ──────────────────────────────────────────────────────────────────
+minio/minio:RELEASE.2025-05-24T17-08-30Z                   minio-2025-05-24.tar
+minio/mc:RELEASE.2025-05-21T01-59-54Z                      mc-2025-05-21.tar
+
+# ── Observability ──────────────────────────────────────────────────────────
 prom/prometheus:v2.52.0                                    prometheus-v2.52.0.tar
 prom/alertmanager:v0.27.0                                  alertmanager-v0.27.0.tar
 grafana/grafana-oss:11.0.0                                 grafana-oss-11.0.0.tar

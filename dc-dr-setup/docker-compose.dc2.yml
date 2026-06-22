@@ -16,7 +16,7 @@ services:
 
   # ── etcd ─────────────────────────────────────────────────────────────────
   etcd:
-    image: bitnami/etcd:3.5
+    image: gcr.io/etcd-development/etcd:v3.5.9
     container_name: etcd-dc2
     restart: unless-stopped
     networks: [dc-internal]
@@ -38,7 +38,7 @@ services:
 
   # ── PostgreSQL + Patroni ──────────────────────────────────────────────────
   postgres-patroni:
-    image: patroni/patroni:3.3.0
+    image: local/patroni:3.3.0
     container_name: postgres-dc2
     restart: unless-stopped
     networks: [dc-internal]
@@ -66,7 +66,7 @@ services:
 
   # ── MinIO ──────────────────────────────────────────────────────────────────
   minio:
-    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
+    image: minio/minio:RELEASE.2025-05-24T17-08-30Z
     container_name: minio-dc2
     restart: unless-stopped
     networks: [dc-internal]
