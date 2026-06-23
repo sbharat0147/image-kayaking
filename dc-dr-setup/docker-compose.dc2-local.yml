@@ -21,6 +21,8 @@ volumes:
   pg_data_dc2:
   pg_raft_dc2:
   minio_data_dc2:
+  pg_data_witness:
+  pg_raft_witness:
 
 services:
 
@@ -40,6 +42,31 @@ services:
       - pg_data_dc2:/home/postgres/data
       - pg_raft_dc2:/home/postgres/raft
       - ./patroni/patroni.dc2-local.yml:/etc/patroni/patroni.yml:ro
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./postgres/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    environment:
+      PATRONI_SUPERUSER_PASSWORD: ${PATRONI_SUPERUSER_PASSWORD}
+      PATRONI_REPLICATION_PASSWORD: ${PATRONI_REPLICATION_PASSWORD}
+      DC1_IP: ${DC1_IP}
+      DC2_IP: ${DC1_IP}
+
+  # ── Raft Witness — 3rd voter for quorum (nofailover, noloadbalance) ───────
+  postgres-witness:
+    image: local/patroni:3.3.0
+    container_name: postgres-witness
+    restart: unless-stopped
+    networks: [dc2-internal]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5434:5432"   # PG (witness, not for app traffic)
+      - "8010:8008"   # Patroni REST API
+      - "5012:5010"   # Raft peer port (3rd voter)
+    volumes:
+      - pg_data_witness:/home/postgres/data
+      - pg_raft_witness:/home/postgres/raft
+      - ./patroni/patroni.witness-local.yml:/etc/patroni/patroni.yml:ro
       - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
       - ./postgres/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro

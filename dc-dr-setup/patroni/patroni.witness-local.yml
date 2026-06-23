@@ -1,19 +1,17 @@
 scope: pg-cluster
-name: pg-dc1
+name: pg-witness
 
 restapi:
   listen: 0.0.0.0:8008
-  connect_address: ${DC1_IP}:8008
+  connect_address: ${DC1_IP}:8010
 
-# Built-in Raft DCS — no external etcd/ZooKeeper needed.
-# Port 5010 must be open between DC1 and DC2.
+# 3rd Raft voter — provides quorum when either DC1 or DC2 is down.
+# Knows about both DC1 (5010) and DC2 (5011) so it can join the cluster.
 raft:
-  self_addr: ${DC1_IP}:5010
-  # DC2 and witness join dynamically; listing them here ensures DC1 can
-  # reconnect to the cluster after a restart when it is no longer leader.
+  self_addr: ${DC1_IP}:5012
   partner_addrs:
+    - ${DC1_IP}:5010
     - ${DC1_IP}:5011
-    - ${DC1_IP}:5012
   data_dir: /home/postgres/raft
 
 bootstrap:
@@ -34,22 +32,12 @@ bootstrap:
         hot_standby: on
         hot_standby_feedback: on
         wal_keep_size: 128MB
-        # archive_mode and archive_command are disabled until pgbackrest
-        # is installed and configured (Phase 7). Enable them then.
         archive_mode: 'off'
         archive_command: 'true'
 
-  initdb:
-    - encoding: UTF8
-    - data-checksums
-
-  pg_hba:
-    - host replication replicator 0.0.0.0/0 md5
-    - host all all 0.0.0.0/0 md5
-
 postgresql:
   listen: 0.0.0.0:5432
-  connect_address: ${DC1_IP}:5432
+  connect_address: ${DC1_IP}:5434
   data_dir: /home/postgres/data
   bin_dir: /usr/lib/postgresql/16/bin
   pgpass: /tmp/pgpass
@@ -61,8 +49,9 @@ postgresql:
       username: postgres
       password: ${PATRONI_SUPERUSER_PASSWORD}
 
+# Witness never becomes primary — only provides Raft quorum vote.
 tags:
-  nofailover: false
-  noloadbalance: false
+  nofailover: true
+  noloadbalance: true
   clonefrom: false
   nosync: false
