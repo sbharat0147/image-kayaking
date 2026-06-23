@@ -16,7 +16,10 @@ services:
 
   # ── etcd ─────────────────────────────────────────────────────────────────
   etcd:
-    image: gcr.io/etcd-development/etcd:v3.5.9
+    build:
+      context: ./etcd
+      dockerfile: Dockerfile
+    image: local/etcd:v3.5.9
     container_name: etcd-dc2
     restart: unless-stopped
     networks: [dc-internal]
@@ -38,6 +41,9 @@ services:
 
   # ── PostgreSQL + Patroni ──────────────────────────────────────────────────
   postgres-patroni:
+    build:
+      context: ./patroni
+      dockerfile: Dockerfile
     image: local/patroni:3.3.0
     container_name: postgres-dc2
     restart: unless-stopped
