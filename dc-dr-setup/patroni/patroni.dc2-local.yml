@@ -8,10 +8,10 @@ restapi:
 # DC2 raft on port 5011 (host), partners with DC1 on port 5010 (host).
 # Both VMs share the same IP in local-test mode (DC1_IP == DC2_IP).
 raft:
-  self_addr: ${DC1_IP}:5011
+  self_addr: postgres-dc2:5010
   partner_addrs:
-    - ${DC1_IP}:5010
-    - ${DC1_IP}:5012
+    - postgres-dc1:5010
+    - postgres-witness:5010
   data_dir: /home/postgres/raft
 
 bootstrap:

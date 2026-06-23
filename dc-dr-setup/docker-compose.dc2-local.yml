@@ -2,20 +2,28 @@ version: "3.9"
 
 # DC2 (DR / Replica) — LOCAL TEST MODE
 # Runs on the same VM as DC1 using offset ports.
-# DC1_IP must be set to this VM's host IP in .env (same as DC1).
 #
 # Port mapping (host → container):
 #   5433 → 5432  PostgreSQL
 #   8009 → 8008  Patroni REST API
-#   5011 → 5010  Patroni Raft peer
 #   9002 → 9000  MinIO S3 API
 #   9003 → 9001  MinIO Console
 #
-# Run: docker compose -f docker-compose.dc2-local.yml --env-file .env up -d
+# Witness (3rd Raft voter):
+#   5434 → 5432  PostgreSQL
+#   8010 → 8008  Patroni REST API
+#
+# Raft uses the shared patroni-cluster Docker network with container names —
+# no host-IP hairpin NAT involved.
+#
+# Run: docker compose -p dc2 -f docker-compose.dc2-local.yml --env-file .env up -d
 
 networks:
   dc2-internal:
     driver: bridge
+  # Must match the network created by the DC1 compose file.
+  patroni-cluster:
+    external: true
 
 volumes:
   pg_data_dc2:
@@ -26,18 +34,15 @@ volumes:
 
 services:
 
-  # ── PostgreSQL + Patroni ──────────────────────────────────────────────────
+  # ── PostgreSQL + Patroni (DC2 replica) ────────────────────────────────────
   postgres-patroni:
     image: local/patroni:3.3.0
     container_name: postgres-dc2
     restart: unless-stopped
-    networks: [dc2-internal]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks: [dc2-internal, patroni-cluster]
     ports:
       - "5433:5432"   # PG (offset from DC1's 5432)
-      - "8009:8008"   # Patroni REST API (offset from 8008)
-      - "5011:5010"   # Raft peer port (offset from 5010)
+      - "8009:8008"   # Patroni REST API
     volumes:
       - pg_data_dc2:/home/postgres/data
       - pg_raft_dc2:/home/postgres/raft
@@ -56,13 +61,10 @@ services:
     image: local/patroni:3.3.0
     container_name: postgres-witness
     restart: unless-stopped
-    networks: [dc2-internal]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks: [dc2-internal, patroni-cluster]
     ports:
       - "5434:5432"   # PG (witness, not for app traffic)
       - "8010:8008"   # Patroni REST API
-      - "5012:5010"   # Raft peer port (3rd voter)
     volumes:
       - pg_data_witness:/home/postgres/data
       - pg_raft_witness:/home/postgres/raft
@@ -83,8 +85,8 @@ services:
     restart: unless-stopped
     networks: [dc2-internal]
     ports:
-      - "9002:9000"   # S3 API (offset from DC1's 9000)
-      - "9003:9001"   # Console (offset from DC1's 9001)
+      - "9002:9000"
+      - "9003:9001"
     volumes:
       - minio_data_dc2:/data
     environment:

@@ -1,10 +1,15 @@
 version: "3.9"
 
 # DC1 (Primary) stack
-# Run: docker compose -f docker-compose.dc1.yml --env-file .env up -d
+# Run: docker compose -p dc1 -f docker-compose.dc1.yml --env-file .env up -d
 
 networks:
   dc-internal:
+    driver: bridge
+  # Shared network so DC1, DC2, and witness can reach each other
+  # by container name for Raft — avoids hairpin NAT via host IP.
+  patroni-cluster:
+    name: patroni-cluster
     driver: bridge
 
 volumes:
@@ -16,7 +21,7 @@ volumes:
 
 services:
 
-  # ── PostgreSQL + Patroni (built-in Raft DCS — no etcd needed) ─────────────
+  # ── PostgreSQL + Patroni ──────────────────────────────────────────────────
   postgres-patroni:
     build:
       context: ./patroni
@@ -24,11 +29,11 @@ services:
     image: local/patroni:3.3.0
     container_name: postgres-dc1
     restart: unless-stopped
-    networks: [dc-internal]
+    networks: [dc-internal, patroni-cluster]
     ports:
       - "5432:5432"
       - "8008:8008"   # Patroni REST API
-      - "5010:5010"   # Patroni Raft peer port (must reach DC2)
+      - "5010:5010"   # Raft peer port (exposed for external tooling)
     volumes:
       - pg_data_dc1:/home/postgres/data
       - pg_raft_dc1:/home/postgres/raft
@@ -49,8 +54,8 @@ services:
     restart: unless-stopped
     networks: [dc-internal]
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Console
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio_data_dc1:/data
     environment:

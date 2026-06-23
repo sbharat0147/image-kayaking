@@ -8,10 +8,10 @@ restapi:
 # 3rd Raft voter — provides quorum when either DC1 or DC2 is down.
 # Knows about both DC1 (5010) and DC2 (5011) so it can join the cluster.
 raft:
-  self_addr: ${DC1_IP}:5012
+  self_addr: postgres-witness:5010
   partner_addrs:
-    - ${DC1_IP}:5010
-    - ${DC1_IP}:5011
+    - postgres-dc1:5010
+    - postgres-dc2:5010
   data_dir: /home/postgres/raft
 
 bootstrap:

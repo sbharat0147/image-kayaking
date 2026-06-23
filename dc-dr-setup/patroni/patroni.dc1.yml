@@ -8,12 +8,10 @@ restapi:
 # Built-in Raft DCS — no external etcd/ZooKeeper needed.
 # Port 5010 must be open between DC1 and DC2.
 raft:
-  self_addr: ${DC1_IP}:5010
-  # DC2 and witness join dynamically; listing them here ensures DC1 can
-  # reconnect to the cluster after a restart when it is no longer leader.
+  self_addr: postgres-dc1:5010
   partner_addrs:
-    - ${DC1_IP}:5011
-    - ${DC1_IP}:5012
+    - postgres-dc2:5010
+    - postgres-witness:5010
   data_dir: /home/postgres/raft
 
 bootstrap:
