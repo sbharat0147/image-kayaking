@@ -9,8 +9,8 @@ restapi:
 # Port 5010 must be open between DC1 and DC2.
 raft:
   self_addr: ${DC1_IP}:5010
-  partner_addrs:
-    - ${DC2_IP}:5010
+  # partner_addrs is intentionally empty for DC1 bootstrap.
+  # DC2 will join dynamically once it is up.
   data_dir: /home/postgres/raft
 
 bootstrap:
