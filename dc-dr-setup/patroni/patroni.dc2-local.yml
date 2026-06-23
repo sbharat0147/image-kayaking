@@ -11,6 +11,7 @@ raft:
   self_addr: ${DC1_IP}:5011
   partner_addrs:
     - ${DC1_IP}:5010
+    - ${DC1_IP}:5012
   data_dir: /home/postgres/raft
 
 bootstrap:
