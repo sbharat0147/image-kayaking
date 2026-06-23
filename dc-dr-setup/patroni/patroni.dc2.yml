@@ -1,15 +1,15 @@
 scope: pg-cluster
-namespace: /service/
 name: pg-dc2
 
 restapi:
   listen: 0.0.0.0:8008
   connect_address: ${DC2_IP}:8008
 
-etcd3:
-  hosts:
-    - ${DC1_IP}:2379
-    - ${DC2_IP}:2379
+raft:
+  self_addr: ${DC2_IP}:5010
+  partner_addrs:
+    - ${DC1_IP}:5010
+  data_dir: /home/postgres/raft
 
 bootstrap:
   dcs:
@@ -27,6 +27,7 @@ bootstrap:
         max_wal_senders: 5
         max_replication_slots: 5
         hot_standby: on
+        hot_standby_feedback: on
         wal_keep_size: 128MB
         archive_mode: on
         archive_command: >-

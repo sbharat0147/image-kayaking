@@ -73,10 +73,9 @@ minimal data loss and minimal manual steps.
 | Traffic | Port | Direction |
 |---------|------|-----------|
 | PG streaming replication | 5432 | DC1 ↔ DC2 |
-| etcd peer | 2380 | DC1 ↔ DC2 |
-| etcd client | 2379 | DC1 ↔ DC2 |
+| Patroni Raft peer | 5010 | DC1 ↔ DC2 |
+| Patroni REST API | 8008 | DC1 ↔ DC2 |
 | MinIO S3 API | 9000 | DC1 ↔ DC2 |
-| pgBackRest TLS | 8432 | DC1 ↔ DC2 |
 | Prometheus scrape | 9187, 9001 | internal |
 
 Firewall: open only the ports above between DC1 and DC2. Use TLS everywhere.

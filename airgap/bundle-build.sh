@@ -20,8 +20,6 @@ BUNDLE_NAME="airgap-bundle-${DATE}.tar.gz"
 
 PATRONI_DOCKERFILE="${REPO_ROOT}/dc-dr-setup/patroni/Dockerfile"
 PATRONI_IMAGE="local/patroni:3.3.0"
-ETCD_DOCKERFILE="${REPO_ROOT}/dc-dr-setup/etcd/Dockerfile"
-ETCD_IMAGE="local/etcd:v3.5.9"
 
 echo "════════════════════════════════════════════════════"
 echo " Airgap Bundle Builder"
@@ -41,13 +39,6 @@ mkdir -p "${IMAGES_DIR}"
 
 # ── Step 1: Build Patroni image (no official image on Docker Hub) ─────────
 echo "[1/5] Building local images from Dockerfiles..."
-echo "      etcd  : ${ETCD_DOCKERFILE}"
-docker build \
-    --tag "${ETCD_IMAGE}" \
-    --file "${ETCD_DOCKERFILE}" \
-    "${REPO_ROOT}/dc-dr-setup/etcd/"
-echo "  Built ${ETCD_IMAGE}."
-echo ""
 echo "      patroni: ${PATRONI_DOCKERFILE}"
 docker build \
     --tag "${PATRONI_IMAGE}" \

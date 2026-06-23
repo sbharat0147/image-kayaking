@@ -9,39 +9,14 @@ networks:
 
 volumes:
   pg_data_dc1:
+  pg_raft_dc1:
   minio_data_dc1:
-  etcd_data_dc1:
   prometheus_data:
   grafana_data:
 
 services:
 
-  # ── etcd ─────────────────────────────────────────────────────────────────
-  etcd:
-    build:
-      context: ./etcd
-      dockerfile: Dockerfile
-    image: local/etcd:v3.5.9
-    container_name: etcd-dc1
-    restart: unless-stopped
-    networks: [dc-internal]
-    ports:
-      - "2379:2379"
-      - "2380:2380"
-    volumes:
-      - etcd_data_dc1:/bitnami/etcd
-    environment:
-      ALLOW_NONE_AUTHENTICATION: "yes"
-      ETCD_NAME: etcd-dc1
-      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://${DC1_IP}:2380
-      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_ADVERTISE_CLIENT_URLS: http://${DC1_IP}:2379
-      ETCD_INITIAL_CLUSTER: etcd-dc1=http://${DC1_IP}:2380,etcd-dc2=http://${DC2_IP}:2380
-      ETCD_INITIAL_CLUSTER_STATE: new
-      ETCD_INITIAL_CLUSTER_TOKEN: pg-cluster-token
-
-  # ── PostgreSQL + Patroni ──────────────────────────────────────────────────
+  # ── PostgreSQL + Patroni (built-in Raft DCS — no etcd needed) ─────────────
   postgres-patroni:
     build:
       context: ./patroni
@@ -53,24 +28,19 @@ services:
     ports:
       - "5432:5432"
       - "8008:8008"   # Patroni REST API
+      - "5010:5010"   # Patroni Raft peer port (must reach DC2)
     volumes:
       - pg_data_dc1:/home/postgres/data
+      - pg_raft_dc1:/home/postgres/raft
       - ./patroni/patroni.dc1.yml:/etc/patroni/patroni.yml:ro
       - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
       - ./postgres/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
     environment:
-      PATRONI_NAME: pg-dc1
-      PATRONI_POSTGRESQL_DATA_DIR: /home/postgres/data
-      PATRONI_SUPERUSER_USERNAME: postgres
       PATRONI_SUPERUSER_PASSWORD: ${PATRONI_SUPERUSER_PASSWORD}
-      PATRONI_REPLICATION_USERNAME: ${POSTGRES_REPLICATION_USER}
       PATRONI_REPLICATION_PASSWORD: ${PATRONI_REPLICATION_PASSWORD}
-      PATRONI_ETCD_HOSTS: ${DC1_IP}:2379,${DC2_IP}:2379
-      PATRONI_RESTAPI_CONNECT_ADDRESS: ${DC1_IP}:8008
-      PATRONI_POSTGRESQL_CONNECT_ADDRESS: ${DC1_IP}:5432
-    depends_on:
-      - etcd
+      DC1_IP: ${DC1_IP}
+      DC2_IP: ${DC2_IP}
 
   # ── MinIO ──────────────────────────────────────────────────────────────────
   minio:

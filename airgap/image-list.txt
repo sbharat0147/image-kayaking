@@ -9,14 +9,12 @@
 # To update a version: change it here AND in docker-compose.dc{1,2}.yml,
 # then re-run bundle-build.sh.
 
-# ── etcd (built locally — Alpine + static binary via wget, no apk/apt needed) ──
-# Tag produced by bundle-build.sh: local/etcd:v3.5.9
-local/etcd:v3.5.9                                          etcd-v3.5.9.tar
-
-# ── postgres:16-bookworm base (pulled so it's in the bundle for offline build)
+# ── Base images (pulled so they're available for offline Docker builds) ────
 postgres:16-bookworm                                       postgres-16-bookworm.tar
+python:3.11-slim-bookworm                                  python-3.11-slim-bookworm.tar
 
 # ── Patroni (built locally — see dc-dr-setup/patroni/Dockerfile) ──────────
+# Uses built-in Raft DCS; no etcd image needed.
 # Tag produced by bundle-build.sh: local/patroni:3.3.0
 local/patroni:3.3.0                                        patroni-3.3.0.tar
 
