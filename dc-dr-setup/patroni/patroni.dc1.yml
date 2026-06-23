@@ -31,11 +31,10 @@ bootstrap:
         hot_standby: on
         hot_standby_feedback: on
         wal_keep_size: 128MB
-        archive_mode: on
-        archive_command: >-
-          pgbackrest --stanza=main archive-push %p
-        restore_command: >-
-          pgbackrest --stanza=main archive-get %f %p
+        # archive_mode and archive_command are disabled until pgbackrest
+        # is installed and configured (Phase 7). Enable them then.
+        archive_mode: 'off'
+        archive_command: 'true'
 
   initdb:
     - encoding: UTF8

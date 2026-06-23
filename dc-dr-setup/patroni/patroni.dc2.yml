@@ -29,11 +29,8 @@ bootstrap:
         hot_standby: on
         hot_standby_feedback: on
         wal_keep_size: 128MB
-        archive_mode: on
-        archive_command: >-
-          pgbackrest --stanza=main archive-push %p
-        restore_command: >-
-          pgbackrest --stanza=main archive-get %f %p
+        archive_mode: 'off'
+        archive_command: 'true'
 
 postgresql:
   listen: 0.0.0.0:5432

@@ -36,7 +36,8 @@ RUN mkdir -p /etc/patroni /home/postgres/raft \
 COPY entrypoint.sh /usr/local/bin/patroni-entrypoint.sh
 RUN chmod +x /usr/local/bin/patroni-entrypoint.sh
 
-USER postgres
+# Do NOT set USER postgres here — the entrypoint runs as root first to fix
+# volume ownership, then uses gosu to drop to postgres before calling patroni.
 EXPOSE 5432 8008 5010
 ENTRYPOINT ["/usr/local/bin/patroni-entrypoint.sh"]
 CMD ["/etc/patroni/patroni.yml"]
