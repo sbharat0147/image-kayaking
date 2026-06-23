@@ -1,10 +1,11 @@
 FROM postgres:16-bookworm
 
-# The postgres base image ships /etc/apt/sources.list.d/pgdg.list which
-# points to apt.postgresql.org. If that host is unreachable (403/firewall),
-# apt-get update fails. We don't need the repo — postgres binaries are
-# already installed in the base image — so drop it before updating.
+# Drop the pgdg repo (host is blocked) and replace the full sources.list
+# with only bookworm stable + bookworm-security. bookworm-updates is prone
+# to hash-sum mismatches during CDN mirror syncs and we don't need it.
 RUN rm -f /etc/apt/sources.list.d/pgdg.list \
+    && printf 'deb http://deb.debian.org/debian bookworm main\ndeb http://deb.debian.org/debian-security bookworm-security main\n' \
+       > /etc/apt/sources.list \
     && apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-pip curl pgbackrest \
     && pip3 install --no-cache-dir --break-system-packages \
