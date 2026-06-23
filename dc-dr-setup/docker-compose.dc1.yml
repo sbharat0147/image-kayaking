@@ -11,6 +11,9 @@ networks:
   patroni-cluster:
     name: patroni-cluster
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
 
 volumes:
   pg_data_dc1:
@@ -29,7 +32,10 @@ services:
     image: local/patroni:3.3.0
     container_name: postgres-dc1
     restart: unless-stopped
-    networks: [dc-internal, patroni-cluster]
+    networks:
+      dc-internal:
+      patroni-cluster:
+        ipv4_address: 172.30.0.10
     ports:
       - "5432:5432"
       - "8008:8008"   # Patroni REST API

@@ -24,6 +24,7 @@ networks:
   # Must match the network created by the DC1 compose file.
   patroni-cluster:
     external: true
+    name: patroni-cluster
 
 volumes:
   pg_data_dc2:
@@ -39,7 +40,10 @@ services:
     image: local/patroni:3.3.0
     container_name: postgres-dc2
     restart: unless-stopped
-    networks: [dc2-internal, patroni-cluster]
+    networks:
+      dc2-internal:
+      patroni-cluster:
+        ipv4_address: 172.30.0.20
     ports:
       - "5433:5432"   # PG (offset from DC1's 5432)
       - "8009:8008"   # Patroni REST API
@@ -61,7 +65,10 @@ services:
     image: local/patroni:3.3.0
     container_name: postgres-witness
     restart: unless-stopped
-    networks: [dc2-internal, patroni-cluster]
+    networks:
+      dc2-internal:
+      patroni-cluster:
+        ipv4_address: 172.30.0.30
     ports:
       - "5434:5432"   # PG (witness, not for app traffic)
       - "8010:8008"   # Patroni REST API

@@ -8,10 +8,10 @@ restapi:
 # Built-in Raft DCS — no external etcd/ZooKeeper needed.
 # Port 5010 must be open between DC1 and DC2.
 raft:
-  self_addr: postgres-dc1:5010
+  self_addr: 172.30.0.10:5010
   partner_addrs:
-    - postgres-dc2:5010
-    - postgres-witness:5010
+    - 172.30.0.20:5010
+    - 172.30.0.30:5010
   data_dir: /home/postgres/raft
 
 bootstrap:
