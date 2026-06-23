@@ -8,6 +8,7 @@ RENDERED="/tmp/patroni-rendered.yml"
 # can write to the data and raft directories.
 chown -R postgres:postgres /home/postgres/ 2>/dev/null || true
 mkdir -p /home/postgres/raft /home/postgres/data
+chmod 700 /home/postgres/data
 chown -R postgres:postgres /home/postgres/raft /home/postgres/data
 
 # Expand ${VAR} placeholders in the patroni config template.
