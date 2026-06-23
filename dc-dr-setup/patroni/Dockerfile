@@ -1,9 +1,11 @@
 FROM postgres:16-bookworm
 
-# Use bookworm (Debian 12) — trixie-pgdg does not exist yet in the pgdg repo.
-# psycopg2-binary and patroni[etcd3] ship pre-compiled wheels so gcc/libpq-dev
-# are not needed, keeping the image smaller.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# The postgres base image ships /etc/apt/sources.list.d/pgdg.list which
+# points to apt.postgresql.org. If that host is unreachable (403/firewall),
+# apt-get update fails. We don't need the repo — postgres binaries are
+# already installed in the base image — so drop it before updating.
+RUN rm -f /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-pip curl pgbackrest \
     && pip3 install --no-cache-dir --break-system-packages \
         "patroni[etcd3]==3.3.0" \
