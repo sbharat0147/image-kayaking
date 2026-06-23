@@ -1,21 +1,15 @@
-FROM postgres:16
+FROM postgres:16-bookworm
 
-# Install Patroni with etcd3 support + dependencies
+# Use bookworm (Debian 12) — trixie-pgdg does not exist yet in the pgdg repo.
+# psycopg2-binary and patroni[etcd3] ship pre-compiled wheels so gcc/libpq-dev
+# are not needed, keeping the image smaller.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-dev \
-        gcc libpq-dev curl \
+        python3 python3-pip curl pgbackrest \
     && pip3 install --no-cache-dir --break-system-packages \
         "patroni[etcd3]==3.3.0" \
         "psycopg2-binary==2.9.9" \
-    && apt-get purge -y gcc python3-dev libpq-dev \
-    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-# pgBackRest for WAL archiving
-RUN apt-get update && apt-get install -y --no-install-recommends pgbackrest \
-    && rm -rf /var/lib/apt/lists/*
-
-# Patroni config directory
 RUN mkdir -p /etc/patroni /var/log/pgbackrest \
     && chown postgres:postgres /etc/patroni /var/log/pgbackrest
 

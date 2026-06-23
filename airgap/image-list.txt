@@ -12,6 +12,9 @@
 # ── etcd (upstream: gcr.io — bitnami/etcd is delisted from Docker Hub) ──
 gcr.io/etcd-development/etcd:v3.5.9                       etcd-v3.5.9.tar
 
+# ── postgres:16-bookworm base (pulled so it's in the bundle for offline build)
+postgres:16-bookworm                                       postgres-16-bookworm.tar
+
 # ── Patroni (built locally — see dc-dr-setup/patroni/Dockerfile) ──────────
 # Tag produced by bundle-build.sh: local/patroni:3.3.0
 local/patroni:3.3.0                                        patroni-3.3.0.tar
