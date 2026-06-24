@@ -1,0 +1,47 @@
+version: "3.9"
+
+# MCP Server — standalone compose
+# Connects to your existing FastAPI services and inference servers.
+#
+# Run:
+#   docker compose --env-file .env up -d
+#
+# To integrate with DC/DR stack:
+#   docker compose -p dc1 -f ../dc-dr-setup/docker-compose.dc1.yml \
+#                         -f docker-compose.yml --env-file .env up -d
+
+networks:
+  mcp-internal:
+    driver: bridge
+  # Attach to the same network as your FastAPI services if they're in Docker.
+  # Change or remove if your services are on a different network.
+  app-network:
+    external: true
+    name: ${APP_NETWORK:-app-network}
+
+services:
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: local/mcp-server:1.0.0
+    container_name: mcp-server
+    restart: unless-stopped
+    networks: [mcp-internal, app-network]
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      UPSTREAM_SERVICES: ${UPSTREAM_SERVICES:-}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      VLLM_URL: ${VLLM_URL:-http://vllm:8000}
+      API_KEY: ${API_KEY:-changeme-mcp-api-key}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      # Optional: mount tools dir to add/update tool definitions without rebuilding
+      - ./tools:/app/tools:ro
