@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
-import re
 
 app = FastAPI(title="Search Service", version="1.0.0")
 
-# Sample document corpus for demo
 _docs = [
     {"id": "1", "title": "PostgreSQL HA with Patroni", "content": "Patroni manages PostgreSQL high availability using Raft or etcd as DCS.", "tags": ["postgres", "ha"]},
     {"id": "2", "title": "MinIO Site Replication", "content": "MinIO supports active-active bidirectional site replication between datacenters.", "tags": ["minio", "storage"]},
@@ -29,11 +27,11 @@ class SearchResult(BaseModel):
     content: str
     score: float
 
-@app.get("/health")
+@app.get("/health", operation_id="search_health")
 def health():
     return {"status": "ok", "service": "search-service"}
 
-@app.post("/search", response_model=List[SearchResult])
+@app.post("/search", response_model=List[SearchResult], operation_id="search")
 def search(req: SearchRequest):
     """Keyword search over the document corpus."""
     terms = req.query.lower().split()
@@ -46,9 +44,9 @@ def search(req: SearchRequest):
     results.sort(key=lambda x: x.score, reverse=True)
     return results[:req.limit]
 
-@app.post("/semantic-search", response_model=List[SearchResult])
+@app.post("/semantic-search", response_model=List[SearchResult], operation_id="semantic_search")
 def semantic_search(req: SemanticSearchRequest):
-    """Simulated semantic search (keyword fallback for demo — replace with real vectors)."""
+    """Semantic search over the document corpus (keyword fallback for demo)."""
     terms = req.query.lower().split()
     results = []
     for doc in _docs:
