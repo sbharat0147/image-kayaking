@@ -31,8 +31,12 @@ RUN pip install \
 COPY app/ ./app/
 COPY tools/ ./tools/
 
-# Pre-download the embedding model so container works fully offline
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+# Copy pre-downloaded embedding model (downloaded on build machine via download-model.sh)
+# If the models/ directory doesn't exist the COPY is skipped (BuildKit behaviour).
+COPY models/ /app/models/
+
+# Tell sentence-transformers to use the local copy — no Hugging Face download at runtime
+ENV SENTENCE_TRANSFORMERS_HOME=/app/models
 
 EXPOSE 8080
 
