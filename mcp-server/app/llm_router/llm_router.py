@@ -6,15 +6,23 @@ _default_policy = RoutingPolicy()
 
 
 def route_llm_request(prompt: str, policy: RoutingPolicy = None) -> str:
-    """Return 'ollama' or 'vllm' based on prompt complexity and policy."""
+    """Return 'ollama' or 'vllm' based on prompt complexity, policy, and availability."""
     policy = policy or _default_policy
+    default = settings.llm_default_backend  # honour operator config
+
     complexity = estimate_complexity(prompt)
 
     if complexity == "low":
         return "ollama"
 
     if complexity == "medium":
-        return "vllm" if policy.prefer_quality else "ollama"
+        preferred = "vllm" if policy.prefer_quality else "ollama"
+    else:
+        # high complexity
+        preferred = "vllm"
 
-    # high complexity → always vLLM if available, else fall back
-    return "vllm"
+    # Fall back to default backend when vLLM is not configured
+    if preferred == "vllm" and default != "vllm":
+        return default
+
+    return preferred

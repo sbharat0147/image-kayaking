@@ -38,6 +38,7 @@ services:
       API_KEY: ${API_KEY:-changeme-mcp-api-key}
       UPSTREAM_SERVICES: "http://notes-service:8000,http://search-service:8000"
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7B-instruct-q4_k_m}
       VLLM_URL: ${VLLM_URL:-http://host.docker.internal:8000}
       LLM_DEFAULT_BACKEND: ${LLM_DEFAULT_BACKEND:-ollama}
       DEBUG: ${DEBUG:-false}
@@ -45,6 +46,8 @@ services:
       TRANSFORMERS_OFFLINE: "1"
       HF_DATASETS_OFFLINE: "1"
       SENTENCE_TRANSFORMERS_HOME: /app/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - notes-service
       - search-service
