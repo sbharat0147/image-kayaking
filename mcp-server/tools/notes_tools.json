@@ -1,0 +1,45 @@
+[
+  {
+    "name": "create_note",
+    "description": "Create a new note with a title and body.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "title": {"type": "string", "description": "Title of the note"},
+        "body": {"type": "string", "description": "Content of the note"},
+        "tags": {"type": "array", "items": {"type": "string"}, "description": "Optional tags"}
+      },
+      "required": ["title", "body"]
+    },
+    "backend_type": "http",
+    "endpoint": "http://notes-service:8000/notes",
+    "method": "POST"
+  },
+  {
+    "name": "get_note",
+    "description": "Retrieve a note by its ID.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "description": "Note ID"}
+      },
+      "required": ["id"]
+    },
+    "backend_type": "http",
+    "endpoint": "http://notes-service:8000/notes/{id}",
+    "method": "GET"
+  },
+  {
+    "name": "list_notes",
+    "description": "List all notes, optionally filtered by tag.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "tag": {"type": "string", "description": "Filter by tag (optional)"}
+      }
+    },
+    "backend_type": "http",
+    "endpoint": "http://notes-service:8000/notes",
+    "method": "GET"
+  }
+]

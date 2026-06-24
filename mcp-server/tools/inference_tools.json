@@ -1,0 +1,30 @@
+[
+  {
+    "name": "ollama_generate",
+    "description": "Generate text using the local Ollama inference server.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "prompt": {"type": "string", "description": "The prompt to send to the model"}
+      },
+      "required": ["prompt"]
+    },
+    "backend_type": "ollama"
+  },
+  {
+    "name": "vllm_chat",
+    "description": "Chat completion using the local vLLM inference server.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {"type": "object"},
+          "description": "OpenAI-style messages array e.g. [{role: user, content: hello}]"
+        }
+      },
+      "required": ["messages"]
+    },
+    "backend_type": "vllm"
+  }
+]
