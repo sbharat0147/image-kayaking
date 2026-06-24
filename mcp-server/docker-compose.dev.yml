@@ -1,10 +1,11 @@
-# Development override — adds live code mounts and uvicorn --reload.
+# Development override — live code mounts + uvicorn --reload.
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #
-# Changes take effect immediately on file save; no rebuild needed.
-# Only the Python source and tool definitions are mounted; the
-# pre-downloaded model weights stay inside the image.
+# mcp-server uses network_mode: host so it can reach the host Ollama daemon
+# at localhost:11434 without going through the corporate proxy.
+# notes-service and search-service stay on mcp-net; mcp-server reaches them
+# via the host-mapped ports (localhost:8001, localhost:8002).
 
 services:
 
@@ -19,11 +20,18 @@ services:
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   mcp-server:
+    network_mode: host        # shares host network — bypasses proxy, reaches localhost:11434
+    networks: !reset []       # remove mcp-net (incompatible with host networking)
+    ports: !reset []          # ports mapping not needed with host network
+    extra_hosts: !reset []    # not needed with host network
     volumes:
       - ./app:/app/app:ro
       - ./tools:/app/tools:ro
     environment:
       DEBUG: "true"
+      # With host networking, all services are reachable on localhost
+      OLLAMA_URL: "http://localhost:11434"
+      UPSTREAM_SERVICES: "http://localhost:8001,http://localhost:8002"
     command: >
       uvicorn app.main:app
       --host 0.0.0.0
