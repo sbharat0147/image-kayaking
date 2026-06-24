@@ -1,26 +1,29 @@
-version: "3.9"
-
-# MCP Server — standalone compose
-# Connects to your existing FastAPI services and inference servers.
-#
-# Run:
-#   docker compose --env-file .env up -d
-#
-# To integrate with DC/DR stack:
-#   docker compose -p dc1 -f ../dc-dr-setup/docker-compose.dc1.yml \
-#                         -f docker-compose.yml --env-file .env up -d
-
 networks:
-  mcp-internal:
+  mcp-net:
     driver: bridge
-  # Attach to the same network as your FastAPI services if they're in Docker.
-  # Change or remove if your services are on a different network.
-  app-network:
-    external: true
-    name: ${APP_NETWORK:-app-network}
 
 services:
 
+  # ── Sample upstream FastAPI services ─────────────────────────────────────
+  notes-service:
+    build:
+      context: ./sample-services/notes-service
+    container_name: notes-service
+    restart: unless-stopped
+    networks: [mcp-net]
+    ports:
+      - "8001:8000"
+
+  search-service:
+    build:
+      context: ./sample-services/search-service
+    container_name: search-service
+    restart: unless-stopped
+    networks: [mcp-net]
+    ports:
+      - "8002:8000"
+
+  # ── MCP Server ────────────────────────────────────────────────────────────
   mcp-server:
     build:
       context: .
@@ -28,20 +31,23 @@ services:
     image: local/mcp-server:1.0.0
     container_name: mcp-server
     restart: unless-stopped
-    networks: [mcp-internal, app-network]
+    networks: [mcp-net]
     ports:
       - "8080:8080"
-    env_file: .env
     environment:
-      UPSTREAM_SERVICES: ${UPSTREAM_SERVICES:-}
-      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
-      VLLM_URL: ${VLLM_URL:-http://vllm:8000}
       API_KEY: ${API_KEY:-changeme-mcp-api-key}
+      UPSTREAM_SERVICES: "http://notes-service:8000,http://search-service:8000"
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      VLLM_URL: ${VLLM_URL:-http://host.docker.internal:8000}
+      LLM_DEFAULT_BACKEND: ${LLM_DEFAULT_BACKEND:-ollama}
+      DEBUG: ${DEBUG:-false}
+    depends_on:
+      - notes-service
+      - search-service
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     volumes:
-      # Optional: mount tools dir to add/update tool definitions without rebuilding
       - ./tools:/app/tools:ro
