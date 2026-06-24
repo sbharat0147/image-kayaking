@@ -41,6 +41,10 @@ services:
       VLLM_URL: ${VLLM_URL:-http://host.docker.internal:8000}
       LLM_DEFAULT_BACKEND: ${LLM_DEFAULT_BACKEND:-ollama}
       DEBUG: ${DEBUG:-false}
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      SENTENCE_TRANSFORMERS_HOME: /app/models
     depends_on:
       - notes-service
       - search-service

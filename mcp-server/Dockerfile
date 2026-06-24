@@ -35,8 +35,11 @@ COPY tools/ ./tools/
 # If the models/ directory doesn't exist the COPY is skipped (BuildKit behaviour).
 COPY models/ /app/models/
 
-# Tell sentence-transformers to use the local copy — no Hugging Face download at runtime
-ENV SENTENCE_TRANSFORMERS_HOME=/app/models
+# Tell sentence-transformers to use the local copy — block ALL outbound HF calls
+ENV SENTENCE_TRANSFORMERS_HOME=/app/models \
+    HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 \
+    HF_DATASETS_OFFLINE=1
 
 EXPOSE 8080
 
