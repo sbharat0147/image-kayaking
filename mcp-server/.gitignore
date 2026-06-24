@@ -6,4 +6,9 @@ __pycache__/
 .venv/
 dist/
 *.egg-info/
-models/
+# Ignore downloaded model weights but keep directory structure
+models/**/*.bin
+models/**/*.safetensors
+models/**/*.pt
+models/**/*.ot
+models/**/*.onnx

@@ -1,6 +1,5 @@
 import os
 from sentence_transformers import SentenceTransformer
-from app.core.config import settings
 
 _model = None
 _MODEL_DIR = "/app/models/sentence-transformers_all-MiniLM-L6-v2"
@@ -9,12 +8,13 @@ _MODEL_DIR = "/app/models/sentence-transformers_all-MiniLM-L6-v2"
 def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
-        if os.path.isdir(_MODEL_DIR) and os.listdir(_MODEL_DIR):
-            # Load directly from local path — no HF lookup at all
-            _model = SentenceTransformer(_MODEL_DIR)
-        else:
-            # Fallback: load by name (requires internet — dev only)
-            _model = SentenceTransformer(settings.embedding_model)
+        if not (os.path.isdir(_MODEL_DIR) and os.listdir(_MODEL_DIR)):
+            raise RuntimeError(
+                f"Embedding model not found at {_MODEL_DIR}. "
+                "Run bash scripts/download-model.sh then rebuild the image."
+            )
+        # Pass the absolute local path so sentence-transformers never contacts HF
+        _model = SentenceTransformer(_MODEL_DIR)
     return _model
 
 

@@ -31,9 +31,11 @@ RUN pip install \
 COPY app/ ./app/
 COPY tools/ ./tools/
 
-# Copy pre-downloaded embedding model (downloaded on build machine via download-model.sh)
-# If the models/ directory doesn't exist the COPY is skipped (BuildKit behaviour).
-COPY models/ /app/models/
+# Copy pre-downloaded embedding model (downloaded on build machine via download-model.sh).
+# Run  bash scripts/download-model.sh  before building — build fails if model is missing.
+COPY models/sentence-transformers_all-MiniLM-L6-v2 /app/models/sentence-transformers_all-MiniLM-L6-v2
+RUN test -f /app/models/sentence-transformers_all-MiniLM-L6-v2/config.json || \
+    { echo "ERROR: embedding model files missing — run bash scripts/download-model.sh first"; exit 1; }
 
 # Tell sentence-transformers to use the local copy — block ALL outbound HF calls
 ENV SENTENCE_TRANSFORMERS_HOME=/app/models \
