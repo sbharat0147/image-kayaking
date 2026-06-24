@@ -9,44 +9,73 @@
 set -euo pipefail
 
 MODEL="all-MiniLM-L6-v2"
-# sentence-transformers caches models as "sentence-transformers_<model-name>"
 DEST="models/sentence-transformers_${MODEL}"
-
-mkdir -p "${DEST}"
-
-BASE_URL="https://huggingface.co/sentence-transformers/${MODEL}/resolve/main"
-
-FILES=(
-  "config.json"
-  "tokenizer_config.json"
-  "tokenizer.json"
-  "vocab.txt"
-  "special_tokens_map.json"
-  "sentence_bert_config.json"
-  "modules.json"
-  "pytorch_model.bin"
-  "1_Pooling/config.json"
-)
 
 mkdir -p "${DEST}/1_Pooling"
 
-echo "Downloading sentence-transformers/${MODEL} to ${DEST}/ ..."
-echo "(SSL verification disabled — corporate proxy environment)"
+BASE="https://huggingface.co/sentence-transformers/${MODEL}/resolve/main"
+
+echo "Downloading sentence-transformers/${MODEL} → ${DEST}/"
+echo "(SSL verification disabled for corporate proxy)"
 echo ""
 
-for file in "${FILES[@]}"; do
-  out="${DEST}/${file}"
-  url="${BASE_URL}/${file}"
+download() {
+  local file="$1"
+  local out="${DEST}/${file}"
   echo "  GET ${file}"
-  wget --no-check-certificate -q -O "${out}" "${url}" || {
-    echo "  WARN: failed to download ${file} — skipping"
+  wget -q --no-check-certificate -O "${out}" "${BASE}/${file}" \
+    && echo "      OK ($(du -sh "$out" | cut -f1))" \
+    || echo "      FAILED — skipping"
+}
+
+# Core model files
+download "config.json"
+download "tokenizer_config.json"
+download "tokenizer.json"
+download "vocab.txt"
+download "special_tokens_map.json"
+download "sentence_bert_config.json"
+download "modules.json"
+
+# Weights — try safetensors first, fall back to pytorch_model.bin
+echo "  GET model.safetensors"
+wget -q --no-check-certificate -O "${DEST}/model.safetensors" \
+  "${BASE}/model.safetensors" \
+  && echo "      OK ($(du -sh "${DEST}/model.safetensors" | cut -f1))" \
+  || {
+    echo "      safetensors not found, trying pytorch_model.bin..."
+    wget -q --no-check-certificate -O "${DEST}/pytorch_model.bin" \
+      "${BASE}/pytorch_model.bin" \
+      && echo "      OK ($(du -sh "${DEST}/pytorch_model.bin" | cut -f1))" \
+      || echo "      FAILED"
   }
+
+# Pooling config
+download "1_Pooling/config.json"
+
+echo ""
+echo "Files in ${DEST}:"
+find "${DEST}" -type f | sort | while read -r f; do
+  printf "  %-50s %s\n" "${f#$DEST/}" "$(du -sh "$f" | cut -f1)"
 done
 
-echo ""
-echo "Model files in ${DEST}/:"
-find "${DEST}" -type f | sort
+# Verify the critical file exists
+if [ ! -f "${DEST}/config.json" ] || [ ! -s "${DEST}/config.json" ]; then
+  echo ""
+  echo "ERROR: config.json missing or empty — download failed."
+  exit 1
+fi
+
+WEIGHT_OK=false
+[ -s "${DEST}/model.safetensors" ] && WEIGHT_OK=true
+[ -s "${DEST}/pytorch_model.bin" ] && WEIGHT_OK=true
+
+if [ "${WEIGHT_OK}" = "false" ]; then
+  echo ""
+  echo "ERROR: No model weights found (model.safetensors or pytorch_model.bin) — download failed."
+  exit 1
+fi
 
 echo ""
-echo "Done. Now build the image:"
-echo "  sudo docker build -t local/mcp-server:1.0.0 ."
+echo "Model ready. Now build the image:"
+echo "  sudo docker compose up -d --build mcp-server"

@@ -3,18 +3,18 @@ from sentence_transformers import SentenceTransformer
 from app.core.config import settings
 
 _model = None
+_MODEL_DIR = "/app/models/sentence-transformers_all-MiniLM-L6-v2"
 
 
 def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
-        # Use local path if available (airgap / no Hugging Face access)
-        local_path = os.path.join(
-            os.environ.get("SENTENCE_TRANSFORMERS_HOME", "/app/models"),
-            settings.embedding_model.replace("/", "_"),
-        )
-        model_name = local_path if os.path.isdir(local_path) else settings.embedding_model
-        _model = SentenceTransformer(model_name)
+        if os.path.isdir(_MODEL_DIR) and os.listdir(_MODEL_DIR):
+            # Load directly from local path — no HF lookup at all
+            _model = SentenceTransformer(_MODEL_DIR)
+        else:
+            # Fallback: load by name (requires internet — dev only)
+            _model = SentenceTransformer(settings.embedding_model)
     return _model
 
 
