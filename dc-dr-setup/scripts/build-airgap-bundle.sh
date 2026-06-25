@@ -10,8 +10,8 @@
 # What is bundled:
 #   images/dc-dr-images.tar.gz        — all Docker images (~3-5 GB)
 #   config/dc-dr-config.tar.gz        — all compose files, configs, scripts, docs
-#   rpms/docker/                      — Docker CE + Compose RPMs for RHEL 9 x86_64
-#   rpms/deps/                        — System dep RPMs (container-selinux, etc.)
+#   rpms/docker/                      — Docker CE + ALL dependency RPMs for RHEL 9 x86_64
+#                                       (includes container-selinux, containerd, iptables, etc.)
 #   pip-wheels/podman-compose/        — podman-compose + all pip deps
 #   tools/jq                          — jq static binary (json processor)
 #   install-scripts/                  — Step-by-step install scripts for RHEL 9
@@ -40,7 +40,6 @@ BUNDLE_DIR="${REPO_ROOT}/airgap-bundle-${DATE_TAG}"
 IMAGES_DIR="${BUNDLE_DIR}/images"
 CONFIG_DIR="${BUNDLE_DIR}/config"
 RPMS_DOCKER="${BUNDLE_DIR}/rpms/docker"
-RPMS_DEPS="${BUNDLE_DIR}/rpms/deps"
 WHEELS_DIR="${BUNDLE_DIR}/pip-wheels/podman-compose"
 TOOLS_DIR="${BUNDLE_DIR}/tools"
 INSTALL_SCRIPTS_DIR="${BUNDLE_DIR}/install-scripts"
@@ -117,7 +116,6 @@ mkdir -p \
   "${IMAGES_DIR}" \
   "${CONFIG_DIR}" \
   "${RPMS_DOCKER}" \
-  "${RPMS_DEPS}" \
   "${WHEELS_DIR}" \
   "${TOOLS_DIR}" \
   "${INSTALL_SCRIPTS_DIR}"
@@ -154,7 +152,6 @@ info "(This resolves all RPM dependencies — takes 2-3 minutes)"
 docker run --rm \
   --platform linux/amd64 \
   -v "${RPMS_DOCKER}:/rpms-docker" \
-  -v "${RPMS_DEPS}:/rpms-deps" \
   quay.io/centos/centos:stream9 \
   bash -c "
     set -euo pipefail
@@ -165,7 +162,9 @@ docker run --rm \
     dnf config-manager --add-repo \
       https://download.docker.com/linux/centos/docker-ce.repo
 
-    echo '--- Downloading Docker CE + Compose plugin RPMs ---'
+    echo '--- Downloading Docker CE + all RPM dependencies (--alldeps) ---'
+    # --alldeps pulls container-selinux, containerd.io, iptables, libseccomp, etc.
+    # Everything needed for a completely offline dnf localinstall on RHEL 9.
     dnf download \
       --resolve \
       --alldeps \
@@ -176,36 +175,22 @@ docker run --rm \
       containerd.io \
       docker-compose-plugin \
       docker-buildx-plugin \
-      2>&1 | grep -v '^$'
-
-    echo '--- Downloading system dependency RPMs ---'
-    dnf download \
-      --resolve \
-      --arch=x86_64 \
-      --destdir=/rpms-deps \
-      container-selinux \
-      libcgroup \
-      fuse-overlayfs \
-      slirp4netns \
-      2>&1 | grep -v '^$' || true
+      2>&1 | grep -v '^\$'
 
     echo '--- Done ---'
-    echo 'Docker RPMs downloaded:'
-    ls -1 /rpms-docker/*.rpm 2>/dev/null | wc -l
-    echo 'Dep RPMs downloaded:'
-    ls -1 /rpms-deps/*.rpm 2>/dev/null | wc -l
+    COUNT=\$(find /rpms-docker -name '*.rpm' | wc -l)
+    echo \"RPMs downloaded: \${COUNT}\"
   " || {
-    warn "RPM download via container failed (proxy/network issue)."
-    warn "The bundle will still work — see install-scripts/01-install-docker-rhel9.sh"
-    warn "for the manual RPM download procedure on a RHEL 9 machine with internet."
-    warn "Or use Podman (pre-installed on RHEL 9) with install-scripts/02-install-podman-compose.sh"
+    warn "RPM download via container failed."
+    warn "The bundle will still work if you use Podman (pre-installed on RHEL 9)."
+    warn "See install-scripts/02-install-podman-compose.sh"
     echo "" > "${RPMS_DOCKER}/.download-failed"
   }
 
-DOCKER_RPM_COUNT=$(ls "${RPMS_DOCKER}"/*.rpm 2>/dev/null | wc -l)
-DEPS_RPM_COUNT=$(ls "${RPMS_DEPS}"/*.rpm 2>/dev/null | wc -l)
-info "Docker RPMs downloaded : ${DOCKER_RPM_COUNT} packages"
-info "Dependency RPMs        : ${DEPS_RPM_COUNT} packages"
+DOCKER_RPM_COUNT=$(find "${RPMS_DOCKER}" -name "*.rpm" 2>/dev/null | wc -l)
+info "Docker CE RPMs downloaded: ${DOCKER_RPM_COUNT} packages (includes all deps)"
+[ "${DOCKER_RPM_COUNT}" -gt 0 ] && \
+  info "  Includes: docker-ce, containerd.io, docker-compose-plugin, container-selinux, and all transitive deps"
 
 # =============================================================================
 section "Step 5/8 — Download podman-compose pip wheels"
@@ -308,7 +293,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUNDLE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 RPMS_DOCKER="${BUNDLE_DIR}/rpms/docker"
-RPMS_DEPS="${BUNDLE_DIR}/rpms/deps"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
@@ -364,17 +348,8 @@ dnf -y remove \
   docker-engine podman runc \
   2>/dev/null || true
 
-# Install dependency RPMs first (container-selinux etc.)
-DEP_COUNT=$(ls "${RPMS_DEPS}"/*.rpm 2>/dev/null | wc -l)
-if [ "${DEP_COUNT}" -gt 0 ]; then
-  info "Installing ${DEP_COUNT} dependency RPMs..."
-  dnf localinstall -y --disablerepo='*' "${RPMS_DEPS}"/*.rpm || {
-    warn "Some dep RPMs failed — they may already be installed. Continuing..."
-  }
-fi
-
-# Install Docker CE RPMs
-info "Installing Docker CE from local RPMs..."
+# Install all Docker CE RPMs (includes container-selinux and all deps via --alldeps)
+info "Installing Docker CE and all dependencies from local RPMs..."
 dnf localinstall -y --disablerepo='*' "${RPMS_DOCKER}"/*.rpm
 
 # Enable and start Docker
@@ -823,8 +798,7 @@ CONTENTS
 ────────
   images/dc-dr-images.tar.gz      All 8 Docker images (~3-5 GB)
   config/dc-dr-config.tar.gz      Compose files, configs, scripts, docs
-  rpms/docker/                    Docker CE RPMs for RHEL 9 x86_64
-  rpms/deps/                      System dependency RPMs
+  rpms/docker/                    Docker CE + ALL deps (container-selinux, iptables etc.)
   pip-wheels/podman-compose/      podman-compose pip wheels (offline install)
   tools/jq                        Static jq binary (JSON processor)
   install-scripts/                Step-by-step automated install scripts
@@ -948,19 +922,11 @@ RPM PACKAGES (Docker CE — RHEL 9 x86_64)
 ──────────────────────────────────────────
 EOF
 
-ls "${RPMS_DOCKER}"/*.rpm 2>/dev/null | while read -r rpm; do
+find "${RPMS_DOCKER}" -name "*.rpm" 2>/dev/null | sort | while read -r rpm; do
   echo "  $(basename "$rpm")" >> "${MANIFEST}"
-done || echo "  (download failed — see README-FIRST.txt)" >> "${MANIFEST}"
-
-cat >> "${MANIFEST}" << EOF
-
-DEPENDENCY RPMS
-───────────────
-EOF
-
-ls "${RPMS_DEPS}"/*.rpm 2>/dev/null | while read -r rpm; do
-  echo "  $(basename "$rpm")" >> "${MANIFEST}"
-done || echo "  (none bundled)" >> "${MANIFEST}"
+done
+[ "$(find "${RPMS_DOCKER}" -name "*.rpm" 2>/dev/null | wc -l)" -eq 0 ] && \
+  echo "  (download failed — see README-FIRST.txt)" >> "${MANIFEST}" || true
 
 cat >> "${MANIFEST}" << EOF
 
