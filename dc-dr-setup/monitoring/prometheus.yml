@@ -1,6 +1,9 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: pg-cluster
+    site: dc1
 
 rule_files:
   - /etc/prometheus/alerting-rules.yml
@@ -11,19 +14,26 @@ alerting:
         - targets: ["alertmanager:9093"]
 
 scrape_configs:
-  - job_name: postgres-dc1
+
+  # ── Patroni REST API ───────────────────────────────────────────────────────
+  # Exposes: patroni_master, patroni_replica, patroni_xlog_location, etc.
+  - job_name: patroni
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["postgres-dc1:8008"]
+        labels:
+          dc: dc1
+          role: patroni
+
+  # ── postgres_exporter ──────────────────────────────────────────────────────
+  # Exposes: pg_replication_lag, pg_stat_user_tables, pg_up, etc.
+  - job_name: postgres
     static_configs:
       - targets: ["postgres-exporter:9187"]
         labels:
           dc: dc1
 
-  # Add a second postgres_exporter on DC2 for full visibility
-  - job_name: postgres-dc2
-    static_configs:
-      - targets: ["${DC2_IP}:9187"]
-        labels:
-          dc: dc2
-
+  # ── MinIO cluster metrics ──────────────────────────────────────────────────
   - job_name: minio-dc1
     metrics_path: /minio/v2/metrics/cluster
     static_configs:
@@ -31,13 +41,7 @@ scrape_configs:
         labels:
           dc: dc1
 
-  - job_name: minio-dc2
-    metrics_path: /minio/v2/metrics/cluster
+  # ── Prometheus self-monitoring ─────────────────────────────────────────────
+  - job_name: prometheus
     static_configs:
-      - targets: ["${DC2_IP}:9000"]
-        labels:
-          dc: dc2
-
-  - job_name: patroni
-    static_configs:
-      - targets: ["postgres-dc1:8008", "${DC2_IP}:8008"]
+      - targets: ["localhost:9090"]

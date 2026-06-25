@@ -1,0 +1,150 @@
+{
+  "title": "MinIO DC/DR Replication",
+  "uid": "minio-dcdr",
+  "tags": ["minio", "dcdr", "replication"],
+  "timezone": "browser",
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1,
+      "title": "MinIO Health Status",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "minio_cluster_health_status", "legendFormat": "{{dc}}" }],
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "HEALTHY", "color": "green" } } },
+            { "type": "value", "options": { "0": { "text": "DEGRADED", "color": "red" } } }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Replication Pending Objects",
+      "type": "timeseries",
+      "gridPos": { "x": 4, "y": 0, "w": 10, "h": 4 },
+      "targets": [{
+        "expr": "minio_replication_pending_count",
+        "legendFormat": "{{dc}} pending"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Replication Failures (5m rate)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 9, "h": 6 },
+      "targets": [{
+        "expr": "increase(minio_replication_failed_count[5m])",
+        "legendFormat": "{{dc}} failures/5m"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Bytes Replicated (5m rate)",
+      "type": "timeseries",
+      "gridPos": { "x": 9, "y": 4, "w": 9, "h": 6 },
+      "targets": [{
+        "expr": "rate(minio_replication_sent_bytes[5m])",
+        "legendFormat": "{{dc}} bytes/s"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Disk Used / Total",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 10, "w": 9, "h": 5 },
+      "targets": [{
+        "expr": "minio_node_disk_used_bytes / minio_node_disk_total_bytes * 100",
+        "legendFormat": "{{dc}} disk %"
+      }],
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Objects in Buckets",
+      "type": "timeseries",
+      "gridPos": { "x": 9, "y": 10, "w": 9, "h": 5 },
+      "targets": [{
+        "expr": "minio_bucket_objects_count",
+        "legendFormat": "{{dc}}/{{bucket}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "S3 Request Rate",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 15, "w": 18, "h": 5 },
+      "targets": [
+        {
+          "expr": "rate(minio_s3_requests_total{dc=\"dc1\"}[1m])",
+          "legendFormat": "dc1 {{api}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    }
+  ]
+}

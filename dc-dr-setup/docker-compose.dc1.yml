@@ -68,6 +68,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_SITE_NAME: dc1
+      MINIO_PROMETHEUS_AUTH_TYPE: public
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -99,6 +100,11 @@ services:
     networks: [dc-internal]
     ports:
       - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
 
   # ── Grafana ───────────────────────────────────────────────────────────────
   grafana:
