@@ -1,0 +1,10 @@
+# Actual secret files — never commit
+.env
+airgap-bundle*/
+*.tar.gz
+*.tar
+
+# Templates are committed intentionally
+!.env.local
+!.env.production
+!.env.example
