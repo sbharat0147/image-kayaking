@@ -9,6 +9,8 @@
 | [05-minio-dcdr.md](05-minio-dcdr.md) | MinIO site replication setup and full test suite |
 | [06-troubleshooting.md](06-troubleshooting.md) | Diagnosis commands and fixes for every known failure mode |
 | [07-enterprise-test-scenarios.md](07-enterprise-test-scenarios.md) | Full test suite: S1–S9 covering all HA and DR scenarios with pass criteria |
+| [08-airgap-developer-setup.md](08-airgap-developer-setup.md) | **Developer manual** — build the airgap bundle on an internet machine, transfer and deploy on two airgap VMs, final checklist |
+| [09-tester-manual.md](09-tester-manual.md) | **Tester manual** — 23 test cases across Phase 1 (internet/local) and Phase 2 (airgap/two-VM): PostgreSQL HA, MinIO DR, monitoring alerts, MCP Server, airgap isolation |
 
 ## Quick Reference
 
