@@ -59,7 +59,7 @@ services:
     image: minio/minio:RELEASE.2025-05-24T17-08-30Z
     container_name: minio-dc1
     restart: unless-stopped
-    networks: [dc-internal]
+    networks: [dc-internal, patroni-cluster]
     ports:
       - "9000:9000"
       - "9001:9001"

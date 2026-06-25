@@ -2,6 +2,9 @@
 # Sets up MinIO site replication between DC1 and DC2.
 # Run ONCE after both stacks are up and healthy.
 # Safe to re-run — idempotent.
+#
+# Requires both MinIO containers to be on the patroni-cluster network
+# so DC1's MinIO server can reach DC2 by container name for peer verification.
 set -euo pipefail
 
 ENV_FILE="${1:-.env.local}"
@@ -18,10 +21,15 @@ DC2_URL="http://localhost:9002"
 MINIO_USER="${MINIO_ROOT_USER:-minioadmin}"
 MINIO_PASS="${MINIO_ROOT_PASSWORD:-minioadmin}"
 
-# mc supports MC_HOST_<alias>=http://user:pass@host:port — no alias set needed.
-MC_ENVS="-e MC_HOST_minio-dc1=http://${MINIO_USER}:${MINIO_PASS}@localhost:9000 \
-         -e MC_HOST_minio-dc2=http://${MINIO_USER}:${MINIO_PASS}@localhost:9002"
-MC="docker run --rm --network host $MC_ENVS minio/mc:latest --no-color"
+# Container-network URLs — reachable from inside DC1's MinIO container.
+DC1_INTERNAL="http://minio-dc1:9000"
+DC2_INTERNAL="http://minio-dc2:9000"
+
+# mc uses MC_HOST_<alias> env vars as aliases — no alias set command needed.
+MC="docker run --rm --network patroni-cluster \
+  -e MC_HOST_minio-dc1=http://${MINIO_USER}:${MINIO_PASS}@minio-dc1:9000 \
+  -e MC_HOST_minio-dc2=http://${MINIO_USER}:${MINIO_PASS}@minio-dc2:9000 \
+  minio/mc:latest --no-color"
 
 echo "==> Waiting for DC1 MinIO to be ready..."
 until curl -sf "${DC1_URL}/minio/health/live" > /dev/null; do sleep 2; done
@@ -30,6 +38,10 @@ echo "    DC1 OK"
 echo "==> Waiting for DC2 MinIO to be ready..."
 until curl -sf "${DC2_URL}/minio/health/live" > /dev/null; do sleep 2; done
 echo "    DC2 OK"
+
+echo "==> Ensuring both MinIO containers are on patroni-cluster network..."
+docker network connect patroni-cluster minio-dc1 2>/dev/null && echo "    minio-dc1 connected" || echo "    minio-dc1 already on network"
+docker network connect patroni-cluster minio-dc2 2>/dev/null && echo "    minio-dc2 connected" || echo "    minio-dc2 already on network"
 
 echo "==> Checking existing replication status..."
 if $MC admin replicate info minio-dc1 2>/dev/null | grep -q "Site Name"; then
