@@ -13,7 +13,8 @@
 | [09-tester-manual.md](09-tester-manual.md) | **Tester manual** — 23 test cases across Phase 1 (internet/local) and Phase 2 (airgap/two-VM): PostgreSQL HA, MinIO DR, monitoring alerts, MCP Server, airgap isolation |
 | [10-postgresql-concepts-and-observations.md](10-postgresql-concepts-and-observations.md) | **PostgreSQL HA concepts** for newcomers — WAL timelines, replication slots, pg_rewind, connect_address pitfall, Raft quorum; every section backed by a real observed error |
 | [11-local-test-setup-runbook.md](11-local-test-setup-runbook.md) | **Local test runbook** — definitive step-by-step guide to spin up, verify, and tear down the full DC/DR stack on a single machine; includes port reference, credentials, checkpoints, failover/switchover tests, and troubleshooting table |
-| [12-test-execution-record.md](12-test-execution-record.md) | **Test execution record** — 9 test cases (TC-PG, TC-FAIL, TC-MINIO) each with intent, exact commands, expected output, pass criteria, and actual results; data integrity audit across all failover/switchover events |
+| [12-test-execution-record.md](12-test-execution-record.md) | **Test execution record** — 13 test cases (TC-PG, TC-FAIL, TC-MINIO, TC-MON) each with intent, exact commands, expected output, pass criteria, and actual results; data integrity audit across all failover/switchover events |
+| [13-airgap-rhel9-setup.md](13-airgap-rhel9-setup.md) | **RHEL 9 airgap guide** — Build a fully self-contained bundle (Docker images + Docker CE RPMs + podman-compose wheels + jq binary + install scripts), transfer to airgap VMs, install Docker CE or Podman, and deploy the full DC/DR stack — no internet required on target VMs |
 
 ## Quick Reference
 
