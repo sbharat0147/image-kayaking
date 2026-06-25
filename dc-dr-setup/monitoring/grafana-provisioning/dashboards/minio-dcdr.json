@@ -16,7 +16,8 @@
       "description": "Overall health of the MinIO cluster. 1 = HEALTHY (all drives and nodes operational). 0 = DEGRADED (one or more drives/nodes offline). Any non-green value requires immediate attention.",
       "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
       "targets": [{ "expr": "minio_cluster_health_status", "legendFormat": "{{dc}}" }],
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "options": { "colorMode": "background", "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal" },
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -28,11 +29,12 @@
     },
 
     {
-      "id": 2, "title": "Nodes Online", "type": "stat",
-      "description": "Number of MinIO nodes currently online. In a single-node setup this should always be 1. In a distributed setup, all nodes should be online. Any offline node reduces write quorum.",
+      "id": 2, "title": "Sites Online (DC1 / DC2)", "type": "stat",
+      "description": "Each MinIO site is an independent single-node instance — '1' per site is correct and healthy. This setup uses site replication (not distributed mode), so DC1 and DC2 each report 1 node (themselves). Both should show 1. If either shows 0, that site's MinIO process is down.",
       "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
-      "targets": [{ "expr": "minio_cluster_nodes_online_total", "legendFormat": "{{dc}} online" }],
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{ "expr": "minio_cluster_nodes_online_total", "legendFormat": "{{dc}}" }],
+      "options": { "colorMode": "background", "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal" },
       "fieldConfig": {
         "defaults": {
           "thresholds": { "mode": "absolute", "steps": [
