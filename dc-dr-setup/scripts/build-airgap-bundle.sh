@@ -198,42 +198,26 @@ section "Step 5/8 — Download podman-compose pip wheels"
 # podman is pre-installed on RHEL 9. podman-compose is installed via pip.
 # We download all wheels so pip install --no-index works offline.
 
-info "Downloading podman-compose wheels (Python 3.11 / manylinux)..."
-
+info "Downloading podman-compose pip wheels..."
+# Single pass: pip resolves podman-compose + deps and downloads binary wheels.
+# podman-compose and python-dotenv are pure-python; pyyaml has a manylinux wheel.
 docker run --rm \
   --platform linux/amd64 \
   -v "${WHEELS_DIR}:/wheels" \
   python:3.11-slim \
   pip download \
     --no-cache-dir \
-    --platform manylinux_2_28_x86_64 \
-    --python-version 3.11 \
-    --only-binary=:all: \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
     --trusted-host pypi.python.org \
     podman-compose \
     pyyaml \
-    -d /wheels \
-    2>&1 | grep -E "^(Collecting|  Downloading|Successfully)" || true
+    -d /wheels 2>&1 || true
 
-# Also grab pure-python wheels (some packages are py3-any)
-docker run --rm \
-  --platform linux/amd64 \
-  -v "${WHEELS_DIR}:/wheels" \
-  python:3.11-slim \
-  pip download \
-    --no-cache-dir \
-    --no-binary=:all: \
-    --trusted-host pypi.org \
-    --trusted-host files.pythonhosted.org \
-    podman-compose \
-    pyyaml \
-    -d /wheels \
-    2>&1 | grep -E "^(Collecting|  Downloading|Successfully)" || true
-
-WHEEL_COUNT=$(ls "${WHEELS_DIR}"/*.whl "${WHEELS_DIR}"/*.tar.gz 2>/dev/null | wc -l)
+WHEEL_COUNT=$(find "${WHEELS_DIR}" -name "*.whl" -o -name "*.tar.gz" 2>/dev/null | wc -l)
 info "pip wheels downloaded: ${WHEEL_COUNT} packages"
+[ "${WHEEL_COUNT}" -gt 0 ] && ls "${WHEELS_DIR}" | sed 's/^/  /' || \
+  warn "pip wheel download may have failed — podman-compose can be installed from internet on airgap VM if needed"
 
 # =============================================================================
 section "Step 6/8 — Download static tools"
@@ -258,6 +242,7 @@ step "Packaging DC/DR config files..."
 # Gather all config files — exclude local .env files (contain secrets)
 tar -czf "${CONFIG_DIR}/dc-dr-config.tar.gz" \
   -C "${REPO_ROOT}" \
+  --ignore-failed-read \
   --exclude='dc-dr-setup/.env' \
   --exclude='dc-dr-setup/.env.local' \
   --exclude='dc-dr-setup/.env.production' \
