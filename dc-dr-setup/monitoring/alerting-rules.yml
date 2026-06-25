@@ -25,7 +25,7 @@ groups:
   - name: replication
     rules:
       - alert: ReplicaLagHigh
-        expr: pg_replication_lag > 30
+        expr: pg_replication_lag_seconds > 30
         for: 2m
         labels:
           severity: warning
@@ -34,7 +34,7 @@ groups:
           description: "DC={{ $labels.dc }} replication lag exceeds 30s. DR recovery point may be at risk."
 
       - alert: ReplicaLagCritical
-        expr: pg_replication_lag > 120
+        expr: pg_replication_lag_seconds > 120
         for: 1m
         labels:
           severity: critical
@@ -43,7 +43,7 @@ groups:
           description: "DC={{ $labels.dc }} lag > 2 min. RPO breach imminent."
 
       - alert: ReplicaDown
-        expr: absent(pg_replication_lag{dc="dc1"})
+        expr: absent(pg_replication_lag_seconds{dc="dc1"})
         for: 1m
         labels:
           severity: critical
@@ -55,7 +55,7 @@ groups:
   - name: postgres
     rules:
       - alert: PostgresDown
-        expr: pg_up == 0
+        expr: patroni_postgres_running == 0
         for: 30s
         labels:
           severity: critical
@@ -85,7 +85,7 @@ groups:
           description: "Prometheus cannot scrape MinIO metrics. Object storage may be down."
 
       - alert: MinIOReplicationErrors
-        expr: increase(minio_replication_failed_count[5m]) > 0
+        expr: increase(minio_cluster_replication_sent_errors_total[5m]) > 0
         for: 5m
         labels:
           severity: warning
@@ -94,7 +94,7 @@ groups:
           description: "{{ $value }} replication failures in last 5 min. Check site replication status."
 
       - alert: MinIODiskUsageHigh
-        expr: (minio_node_disk_used_bytes / minio_node_disk_total_bytes) > 0.85
+        expr: (1 - (minio_cluster_capacity_usable_free_bytes / minio_cluster_capacity_usable_total_bytes)) > 0.85
         for: 10m
         labels:
           severity: warning
