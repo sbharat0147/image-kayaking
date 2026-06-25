@@ -223,15 +223,25 @@ info "pip wheels downloaded: ${WHEEL_COUNT} packages"
 section "Step 6/8 — Download static tools"
 # =============================================================================
 
-# jq — static binary, no install needed
-JQ_VERSION="1.7.1"
-info "Downloading jq ${JQ_VERSION} (static binary)..."
-curl -fsSL --retry 3 \
-  "https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-amd64" \
-  -o "${TOOLS_DIR}/jq" && \
-  chmod +x "${TOOLS_DIR}/jq" && \
-  info "jq downloaded: $(${TOOLS_DIR}/jq --version 2>/dev/null)" || \
-  warn "jq download failed — install from EPEL on the target VM"
+# jq — download RPM from CentOS repos via the same container used for Docker RPMs.
+# Avoids GitHub CDN which may be blocked by corporate proxies.
+info "Downloading jq RPM (from CentOS repos)..."
+docker run --rm \
+  --platform linux/amd64 \
+  -v "${TOOLS_DIR}:/tools" \
+  quay.io/centos/centos:stream9 \
+  bash -c "
+    dnf install -y --quiet jq 2>/dev/null
+    cp /usr/bin/jq /tools/jq
+    chmod +x /tools/jq
+    echo 'jq version:' \$(/tools/jq --version)
+  " 2>&1 | tail -3 || warn "jq download failed — will be noted in README-FIRST.txt"
+
+if [ -f "${TOOLS_DIR}/jq" ] && [ -x "${TOOLS_DIR}/jq" ]; then
+  info "jq bundled: $(${TOOLS_DIR}/jq --version 2>/dev/null)"
+else
+  warn "jq not bundled — on RHEL 9 airgap VM install via: sudo dnf install -y jq (from EPEL or local mirror)"
+fi
 
 # =============================================================================
 section "Step 7/8 — Bundle config files and install scripts"
