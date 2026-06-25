@@ -1,5 +1,3 @@
-version: "3.9"
-
 # DC2 (DR / Replica) — LOCAL TEST MODE
 # Runs on the same VM as DC1 using offset ports.
 #
