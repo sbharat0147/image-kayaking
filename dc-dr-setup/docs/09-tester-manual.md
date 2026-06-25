@@ -27,13 +27,25 @@ curl --version
 psql --version           # any postgresql-client package
 ```
 
+**Important — always start clean:**
+
+PostgreSQL volumes persist data including the WAL timeline. If you have run
+the stack before, stale volumes will cause DC2 and witness to fail streaming
+because their timeline will not match DC1's. Always tear down with `-v` to
+wipe volumes before a fresh test run:
+
+```bash
+docker compose -p dc2 -f docker-compose.dc2-local.yml --env-file .env down -v
+docker compose -p dc1 -f docker-compose.dc1.yml --env-file .env down -v
+```
+
 **Start the stack:**
 
 ```bash
 cd dc-dr-setup/
 
 # Copy and fill in the .env (local-test values shown)
-cp .env.example .env
+cp .env.local .env
 cat > .env <<'EOF'
 DC1_IP=127.0.0.1
 DC2_IP=127.0.0.1

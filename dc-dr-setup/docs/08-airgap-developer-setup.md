@@ -283,6 +283,12 @@ MINIO_ROOT_PASSWORD=<strong-random-password-min-20-chars>
 
 ### B6. Start the DC1 stack
 
+> **Always use `down -v` when restarting from scratch.** PostgreSQL stores the
+> WAL timeline in the data volume. If DC1 has been restarted (even once), its
+> timeline advances. DC2 started with an old volume will refuse to stream and
+> show `timeline mismatch` or `replication slot does not exist` errors.
+> The `-v` flag removes volumes so Patroni does a fresh `pg_basebackup`.
+
 ```bash
 cd /opt/dc-dr/dc-dr-setup
 

@@ -24,6 +24,39 @@ docker logs -f postgres-witness
 
 ---
 
+## Issue: DC2 stuck on "replication slot does not exist" / timeline mismatch
+
+**Symptoms**: DC2 or witness logs show:
+```
+ERROR: replication slot "pg_dc2" does not exist
+FATAL: could not start WAL streaming
+ERROR: Exception when working with leader
+```
+And `pg_replication_slots` on DC1 shows `active: f`.
+
+**Cause**: The PostgreSQL data volume on DC2/witness contains a stale WAL
+timeline (e.g., timeline 4) while DC1 has advanced to a higher timeline
+(e.g., timeline 7) due to previous failovers or restarts. DC2 cannot stream
+across the timeline gap with an old data directory.
+
+**Fix**: Wipe DC2 volumes so Patroni performs a fresh `pg_basebackup` from DC1:
+
+```bash
+docker compose -p dc2 -f docker-compose.dc2-local.yml --env-file .env down -v
+docker compose -p dc2 -f docker-compose.dc2-local.yml --env-file .env up -d
+
+# Watch for successful cloning
+docker logs -f postgres-dc2 2>&1 | grep -E "replica|streaming|basebackup|timeline"
+```
+
+Patroni will call `pg_basebackup` automatically within ~30 seconds, bringing
+DC2 to DC1's current timeline. After ~60 seconds the cluster should show
+`lag=0` for DC2.
+
+**Prevention**: Always use `down -v` when tearing down between test runs.
+
+---
+
 ## Issue: DC2 does not promote after DC1 goes down
 
 **Symptoms**: After stopping DC1, DC2 log shows:
