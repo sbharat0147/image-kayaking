@@ -8,37 +8,35 @@
   "schemaVersion": 38,
   "panels": [
 
-    { "id": 100, "type": "row", "title": "🟢 Cluster Overview", "collapsed": false,
-      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 } },
+    { "id": 100, "type": "row", "title": "🟢  Cluster Overview — who is primary, is everything up?",
+      "collapsed": false, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 } },
 
     {
-      "id": 1, "title": "Cluster Leader", "type": "stat",
-      "description": "Which node is currently the Patroni primary (master).",
-      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
-      "targets": [{ "expr": "patroni_master", "legendFormat": "{{scope}}" }],
-      "options": { "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "id": 1, "title": "Who is the Primary?", "type": "stat",
+      "description": "Shows the node currently acting as the PostgreSQL primary (leader). GREEN = there is a leader. If this is blank or red, no primary exists — writes are impossible.",
+      "gridPos": { "x": 0, "y": 1, "w": 5, "h": 4 },
+      "targets": [{ "expr": "patroni_master == 1", "legendFormat": "{{node}}" }],
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "name",
+        "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
-          "mappings": [
-            { "type": "value", "options": { "1": { "text": "PRIMARY ✓", "color": "green" } } },
-            { "type": "value", "options": { "0": { "text": "REPLICA", "color": "blue" } } }
-          ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }, { "color": "green", "value": 1 }] }
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "color": { "mode": "thresholds" }
         }
       }
     },
 
     {
-      "id": 2, "title": "PostgreSQL Status", "type": "stat",
-      "description": "Whether the PostgreSQL process is reachable and accepting queries.",
-      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
-      "targets": [{ "expr": "pg_up", "legendFormat": "postgres" }],
+      "id": 2, "title": "PostgreSQL Running", "type": "stat",
+      "description": "Is the PostgreSQL process on DC1 alive and accepting connections? 1 = YES (green). 0 = the process crashed or failed to start.",
+      "gridPos": { "x": 5, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "patroni_postgres_running", "legendFormat": "{{node}}" }],
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "1": { "text": "UP ✓", "color": "green" } } },
-            { "type": "value", "options": { "0": { "text": "DOWN ✗", "color": "red" } } }
+            { "type": "value", "options": { "1": { "text": "RUNNING ✓", "color": "green" } } },
+            { "type": "value", "options": { "0": { "text": "DOWN ✗",    "color": "red"   } } }
           ]
         }
       }
@@ -46,266 +44,199 @@
 
     {
       "id": 3, "title": "WAL Timeline", "type": "stat",
-      "description": "Current WAL timeline. Increments on every failover/promotion.",
-      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "description": "The current WAL timeline number. Starts at 1 when the cluster is created. Increments by 1 on every failover or promotion. Timeline 3 means there have been 2 failover/switchover events since cluster creation.",
+      "gridPos": { "x": 9, "y": 1, "w": 4, "h": 4 },
       "targets": [{ "expr": "patroni_postgres_timeline", "legendFormat": "timeline" }],
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
         }
       }
     },
 
     {
-      "id": 4, "title": "Replication Lag", "type": "stat",
-      "description": "Current replication lag between primary and replica. Should be near 0.",
-      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
-      "targets": [{ "expr": "pg_replication_lag", "legendFormat": "lag" }],
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 10 },
-              { "color": "red", "value": 60 }
-            ]
-          }
-        }
-      }
-    },
-
-    {
-      "id": 5, "title": "Active Connections", "type": "stat",
-      "description": "Total active database connections right now.",
-      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
-      "targets": [{ "expr": "sum(pg_stat_activity_count{state=\"active\"})", "legendFormat": "connections" }],
-      "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 50 },
-              { "color": "red", "value": 80 }
-            ]
-          }
-        }
-      }
-    },
-
-    {
-      "id": 6, "title": "Cluster Locked", "type": "stat",
-      "description": "Whether the cluster has a leader (locked). Unlocked = no primary elected = danger.",
-      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
-      "targets": [{ "expr": "patroni_cluster_unlocked", "legendFormat": "locked" }],
+      "id": 4, "title": "Cluster has a Leader?", "type": "stat",
+      "description": "Is the cluster 'locked' — meaning a leader exists and holds the DCS lock? LOCKED ✓ (green) = normal. NO LEADER (red) = split-brain risk, no primary elected, writes are down.",
+      "gridPos": { "x": 13, "y": 1, "w": 5, "h": 4 },
+      "targets": [{ "expr": "patroni_cluster_unlocked", "legendFormat": "cluster" }],
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "0": { "text": "LOCKED ✓", "color": "green" } } },
-            { "type": "value", "options": { "1": { "text": "NO LEADER ✗", "color": "red" } } }
+            { "type": "value", "options": { "0": { "text": "LEADER EXISTS ✓", "color": "green" } } },
+            { "type": "value", "options": { "1": { "text": "NO LEADER ✗",     "color": "red"   } } }
           ]
         }
       }
     },
 
-    { "id": 101, "type": "row", "title": "📡 Replication Health", "collapsed": false,
-      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 } },
+    {
+      "id": 5, "title": "Restart Pending?", "type": "stat",
+      "description": "Does any node need a restart to apply a PostgreSQL config change? 0 = no restart needed (green). 1 = a config change was applied that requires a restart — plan a maintenance window.",
+      "gridPos": { "x": 18, "y": 1, "w": 3, "h": 4 },
+      "targets": [{ "expr": "patroni_pending_restart", "legendFormat": "{{node}}" }],
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "NO ✓",  "color": "green"  } } },
+            { "type": "value", "options": { "1": { "text": "YES ⚠", "color": "orange" } } }
+          ]
+        }
+      }
+    },
 
     {
-      "id": 10, "title": "Replication Lag Over Time", "type": "timeseries",
-      "description": "How far behind the replica is from the primary WAL position. Spikes indicate replication delay.",
-      "gridPos": { "x": 0, "y": 6, "w": 16, "h": 8 },
-      "targets": [{ "expr": "pg_replication_lag", "legendFormat": "Replication Lag" }],
+      "id": 6, "title": "Failsafe Mode Active?", "type": "stat",
+      "description": "Failsafe mode prevents the primary from stepping down if it temporarily loses DCS contact (protects against false failovers during network blips). 0 = normal mode. 1 = failsafe is actively protecting the primary — investigate DCS connectivity.",
+      "gridPos": { "x": 21, "y": 1, "w": 3, "h": 4 },
+      "targets": [{ "expr": "patroni_failsafe_mode_is_active", "legendFormat": "failsafe" }],
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "OFF ✓",    "color": "green"  } } },
+            { "type": "value", "options": { "1": { "text": "ACTIVE ⚠", "color": "orange" } } }
+          ]
+        }
+      }
+    },
+
+    { "id": 101, "type": "row", "title": "📡  Replication Health — is the replica keeping up?",
+      "collapsed": false, "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 } },
+
+    {
+      "id": 10, "title": "Replication Lag (seconds)", "type": "timeseries",
+      "description": "How many seconds behind the replica is from the primary. In a healthy cluster this should be near 0. YELLOW > 10s means the replica is falling behind. RED > 60s means serious replication delay — investigate network or disk I/O on the replica.",
+      "gridPos": { "x": 0, "y": 6, "w": 14, "h": 8 },
+      "targets": [{ "expr": "pg_replication_lag_seconds", "legendFormat": "Replication Lag" }],
       "options": { "tooltip": { "mode": "multi" } },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 10 },
-              { "color": "red", "value": 60 }
-            ]
-          },
-          "custom": {
-            "lineWidth": 2, "fillOpacity": 20,
-            "thresholdsStyle": { "mode": "area" }
-          }
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 60 }
+          ]},
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "thresholdsStyle": { "mode": "area" } }
         }
       }
     },
 
     {
-      "id": 11, "title": "Patroni Node Roles", "type": "timeseries",
-      "description": "1 = node is in that role. Watch for primary handover events.",
-      "gridPos": { "x": 16, "y": 6, "w": 8, "h": 8 },
-      "targets": [
-        { "expr": "patroni_master", "legendFormat": "Master" },
-        { "expr": "patroni_replica", "legendFormat": "Replica" },
-        { "expr": "patroni_standby_leader", "legendFormat": "Standby Leader" }
-      ],
-      "options": { "tooltip": { "mode": "multi" } },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short", "min": 0, "max": 1,
-          "custom": { "lineWidth": 2, "fillOpacity": 15 }
-        }
-      }
-    },
-
-    { "id": 102, "type": "row", "title": "⚡ PostgreSQL Performance", "collapsed": false,
-      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 } },
-
-    {
-      "id": 20, "title": "Connections by State", "type": "timeseries",
-      "description": "Active = running a query. Idle = connected but waiting. Idle in transaction = in a transaction but not querying (potential lock holder).",
-      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
-      "targets": [
-        { "expr": "pg_stat_activity_count{state=\"active\"}", "legendFormat": "Active" },
-        { "expr": "pg_stat_activity_count{state=\"idle\"}", "legendFormat": "Idle" },
-        { "expr": "pg_stat_activity_count{state=\"idle in transaction\"}", "legendFormat": "Idle in Transaction ⚠" }
-      ],
-      "options": { "tooltip": { "mode": "multi" } },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
-        },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "Idle in Transaction ⚠" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
-        ]
-      }
-    },
-
-    {
-      "id": 21, "title": "Transactions Per Second", "type": "timeseries",
-      "description": "Rate of committed and rolled-back transactions. Rollback spikes indicate errors.",
-      "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
-      "targets": [
-        { "expr": "sum(rate(pg_stat_database_xact_commit{datname!~\"template.*|postgres\"}[1m]))", "legendFormat": "Commits/s" },
-        { "expr": "sum(rate(pg_stat_database_xact_rollback{datname!~\"template.*|postgres\"}[1m]))", "legendFormat": "Rollbacks/s ⚠" }
-      ],
-      "options": { "tooltip": { "mode": "multi" } },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
-        },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "Rollbacks/s ⚠" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
-        ]
-      }
-    },
-
-    {
-      "id": 22, "title": "Cache Hit Ratio", "type": "gauge",
-      "description": "Percentage of queries served from memory vs disk. Below 95% indicates a need for more shared_buffers.",
-      "gridPos": { "x": 0, "y": 23, "w": 6, "h": 7 },
-      "targets": [{
-        "expr": "100 * sum(pg_stat_database_blks_hit) / (sum(pg_stat_database_blks_hit) + sum(pg_stat_database_blks_read) + 1)",
-        "legendFormat": "Cache Hit %"
-      }],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": true, "showThresholdMarkers": true },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent", "min": 0, "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 90 },
-              { "color": "green", "value": 95 }
-            ]
-          }
-        }
-      }
-    },
-
-    {
-      "id": 23, "title": "Database Size", "type": "timeseries",
-      "description": "Total size of each database on disk. Useful for capacity planning.",
-      "gridPos": { "x": 6, "y": 23, "w": 10, "h": 7 },
-      "targets": [{
-        "expr": "pg_database_size_bytes{datname!~\"template.*\"}",
-        "legendFormat": "{{datname}}"
-      }],
+      "id": 11, "title": "WAL Lag per Replication Slot (bytes)", "type": "timeseries",
+      "description": "How many bytes of WAL data the replica has not yet consumed. 0 = fully caught up. A growing number means the replica is not streaming fast enough. If a replica goes offline, this will grow until the slot's WAL is exhausted (then pg_basebackup is needed).",
+      "gridPos": { "x": 14, "y": 6, "w": 10, "h": 8 },
+      "targets": [{ "expr": "pg_replication_slots_pg_wal_lsn_diff", "legendFormat": "{{slot_name}}" }],
       "options": { "tooltip": { "mode": "multi" } },
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10485760 },
+            { "color": "red", "value": 104857600 }
+          ]},
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "thresholdsStyle": { "mode": "area" } }
         }
       }
     },
 
     {
-      "id": 24, "title": "Dead Tuples (table bloat)", "type": "timeseries",
-      "description": "Dead rows awaiting VACUUM. High counts indicate autovacuum is falling behind.",
-      "gridPos": { "x": 16, "y": 23, "w": 8, "h": 7 },
-      "targets": [{
-        "expr": "sum by (relname) (pg_stat_user_tables_n_dead_tup)",
-        "legendFormat": "{{relname}}"
-      }],
+      "id": 12, "title": "Node Roles Over Time", "type": "timeseries",
+      "description": "Shows each node's role as 1 (active in that role) or 0 (not). A clean failover looks like: Master drops to 0, Replica jumps to 1 simultaneously. The point where Master and Replica lines cross is the exact moment of failover/switchover.",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 7 },
+      "targets": [
+        { "expr": "patroni_master",        "legendFormat": "{{node}} — Master" },
+        { "expr": "patroni_replica",       "legendFormat": "{{node}} — Replica" },
+        { "expr": "patroni_standby_leader","legendFormat": "{{node}} — Standby Leader" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0, "max": 1,
+          "custom": { "lineWidth": 2, "fillOpacity": 10 } }
+      }
+    },
+
+    {
+      "id": 13, "title": "Replication Slots — Active?", "type": "stat",
+      "description": "Shows whether each replication slot is actively being consumed by its replica. active=1 (green) = replica is connected and streaming. active=0 (red) = replica is offline — WAL is accumulating on the primary disk.",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 7 },
+      "targets": [{ "expr": "pg_replication_slot_slot_is_active", "legendFormat": "Slot: {{slot_name}}" }],
+      "options": { "colorMode": "background", "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "ACTIVE — replica streaming ✓", "color": "green" } } },
+            { "type": "value", "options": { "0": { "text": "INACTIVE — replica offline ✗",  "color": "red"   } } }
+          ]
+        }
+      }
+    },
+
+    { "id": 102, "type": "row", "title": "⚡  Database Activity — what is PostgreSQL doing right now?",
+      "collapsed": false, "gridPos": { "x": 0, "y": 21, "w": 24, "h": 1 } },
+
+    {
+      "id": 20, "title": "Database Size", "type": "timeseries",
+      "description": "Total on-disk size of each database. Useful for capacity planning and detecting unexpected growth (e.g. large table without autovacuum running).",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 7 },
+      "targets": [{ "expr": "pg_database_size_bytes{datname!~\"template.*\"}", "legendFormat": "{{datname}}" }],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "lineWidth": 2, "fillOpacity": 10 } }
+      }
+    },
+
+    {
+      "id": 21, "title": "Lock Count by Type", "type": "timeseries",
+      "description": "Number of locks held in the database by lock mode. A spike in RowExclusiveLock is normal during writes. A spike in AccessExclusiveLock or ShareUpdateExclusiveLock usually indicates DDL or VACUUM FULL — these can block other queries.",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 7 },
+      "targets": [{ "expr": "pg_locks_count", "legendFormat": "{{mode}}" }],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 5 } }
+      }
+    },
+
+    { "id": 103, "type": "row", "title": "🕒  Patroni Internal State — DCS and WAL positions",
+      "collapsed": false, "gridPos": { "x": 0, "y": 29, "w": 24, "h": 1 } },
+
+    {
+      "id": 30, "title": "WAL Write Position (xlog_location)", "type": "timeseries",
+      "description": "The primary's current WAL write position as a numeric LSN. Increasing = writes are happening. Flat = no write activity.",
+      "gridPos": { "x": 0, "y": 30, "w": 12, "h": 7 },
+      "targets": [
+        { "expr": "patroni_xlog_location",          "legendFormat": "WAL Write Position" },
+        { "expr": "patroni_xlog_replayed_location",  "legendFormat": "WAL Replayed by Replica" },
+        { "expr": "patroni_xlog_received_location",  "legendFormat": "WAL Received by Replica" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "lineWidth": 2, "fillOpacity": 5 } }
+      }
+    },
+
+    {
+      "id": 31, "title": "DCS Last Seen (seconds ago)", "type": "timeseries",
+      "description": "How many seconds ago Patroni successfully communicated with the Raft DCS (Distributed Configuration Store). Should be under 10 seconds. If this grows, Patroni is losing contact with its quorum — a failover risk.",
+      "gridPos": { "x": 12, "y": 30, "w": 12, "h": 7 },
+      "targets": [{ "expr": "time() - patroni_dcs_last_seen", "legendFormat": "DCS Last Seen (s ago)" }],
       "options": { "tooltip": { "mode": "multi" } },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 },
-              { "color": "red", "value": 10000 }
-            ]
-          },
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+          "unit": "s",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 15 },
+            { "color": "red", "value": 30 }
+          ]},
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "thresholdsStyle": { "mode": "area" } }
         }
-      }
-    },
-
-    { "id": 103, "type": "row", "title": "📊 Query & Lock Stats", "collapsed": false,
-      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 1 } },
-
-    {
-      "id": 30, "title": "Rows Returned / Fetched / Inserted / Updated / Deleted", "type": "timeseries",
-      "description": "Row-level throughput. Useful to understand read vs write workload mix.",
-      "gridPos": { "x": 0, "y": 31, "w": 14, "h": 8 },
-      "targets": [
-        { "expr": "sum(rate(pg_stat_database_tup_returned{datname!~\"template.*|postgres\"}[1m]))", "legendFormat": "Rows Returned/s" },
-        { "expr": "sum(rate(pg_stat_database_tup_fetched{datname!~\"template.*|postgres\"}[1m]))", "legendFormat": "Rows Fetched/s" },
-        { "expr": "sum(rate(pg_stat_database_tup_inserted{datname!~\"template.*|postgres\"}[1m]))", "legendFormat": "Rows Inserted/s" },
-        { "expr": "sum(rate(pg_stat_database_tup_updated{datname!~\"template.*|postgres\"}[1m]))", "legendFormat": "Rows Updated/s" },
-        { "expr": "sum(rate(pg_stat_database_tup_deleted{datname!~\"template.*|postgres\"}[1m]))", "legendFormat": "Rows Deleted/s" }
-      ],
-      "options": { "tooltip": { "mode": "multi" } },
-      "fieldConfig": {
-        "defaults": { "unit": "rps", "custom": { "lineWidth": 2, "fillOpacity": 5 } }
-      }
-    },
-
-    {
-      "id": 31, "title": "Temporary Files Created", "type": "timeseries",
-      "description": "Temp files indicate queries that spill to disk (insufficient work_mem). Reduce these for better query performance.",
-      "gridPos": { "x": 14, "y": 31, "w": 10, "h": 8 },
-      "targets": [
-        { "expr": "rate(pg_stat_database_temp_files{datname!~\"template.*\"}[5m])", "legendFormat": "{{datname}} temp files/s" },
-        { "expr": "rate(pg_stat_database_temp_bytes{datname!~\"template.*\"}[5m])", "legendFormat": "{{datname}} temp bytes/s" }
-      ],
-      "options": { "tooltip": { "mode": "multi" } },
-      "fieldConfig": {
-        "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 10 } }
       }
     }
 
