@@ -23,6 +23,8 @@ bootstrap:
     synchronous_mode: false
     postgresql:
       use_pg_rewind: true
+      failsafe_mode: true
+      check_timeline: true
       use_slots: true
       parameters:
         wal_level: replica
@@ -31,7 +33,7 @@ bootstrap:
         max_replication_slots: 5
         hot_standby: on
         hot_standby_feedback: on
-        wal_keep_size: 128MB
+        wal_keep_size: 1024MB
         archive_mode: 'off'
         archive_command: 'true'
 
