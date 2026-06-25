@@ -1,37 +1,38 @@
 {
   "title": "MinIO DC/DR Replication",
   "uid": "minio-dcdr",
-  "tags": ["minio", "dcdr", "replication"],
+  "tags": ["minio", "dcdr", "replication", "s3"],
   "timezone": "browser",
   "refresh": "15s",
   "time": { "from": "now-1h", "to": "now" },
   "schemaVersion": 38,
   "panels": [
+
+    { "id": 100, "type": "row", "title": "🟢 Site Health Overview", "collapsed": false,
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 } },
+
     {
-      "id": 1,
-      "title": "MinIO Health Status",
-      "type": "stat",
-      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
-      "targets": [{ "expr": "minio_cluster_health_status", "legendFormat": "{{dc}}" }],
-      "options": { "colorMode": "background", "graphMode": "none" },
+      "id": 1, "title": "DC1 MinIO Status", "type": "stat",
+      "description": "Health status of the DC1 (primary) MinIO instance.",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "minio_cluster_health_status", "legendFormat": "DC1" }],
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "1": { "text": "HEALTHY", "color": "green" } } },
-            { "type": "value", "options": { "0": { "text": "DEGRADED", "color": "red" } } }
+            { "type": "value", "options": { "1": { "text": "HEALTHY ✓", "color": "green" } } },
+            { "type": "value", "options": { "0": { "text": "DEGRADED ✗", "color": "red" } } }
           ]
         }
       }
     },
+
     {
-      "id": 2,
-      "title": "Replication Pending Objects",
-      "type": "timeseries",
-      "gridPos": { "x": 4, "y": 0, "w": 10, "h": 4 },
-      "targets": [{
-        "expr": "minio_replication_pending_count",
-        "legendFormat": "{{dc}} pending"
-      }],
+      "id": 2, "title": "Replication Pending", "type": "stat",
+      "description": "Number of objects queued for replication to the peer site. Should stay near 0.",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "minio_replication_pending_count", "legendFormat": "pending" }],
+      "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -42,20 +43,17 @@
               { "color": "yellow", "value": 10 },
               { "color": "red", "value": 100 }
             ]
-          },
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+          }
         }
       }
     },
+
     {
-      "id": 3,
-      "title": "Replication Failures (5m rate)",
-      "type": "timeseries",
-      "gridPos": { "x": 0, "y": 4, "w": 9, "h": 6 },
-      "targets": [{
-        "expr": "increase(minio_replication_failed_count[5m])",
-        "legendFormat": "{{dc}} failures/5m"
-      }],
+      "id": 3, "title": "Replication Failures", "type": "stat",
+      "description": "Total number of replication failures. Any non-zero value needs investigation.",
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "minio_replication_failed_count", "legendFormat": "failures" }],
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -65,42 +63,68 @@
               { "color": "green", "value": null },
               { "color": "red", "value": 1 }
             ]
-          },
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+          }
         }
       }
     },
+
     {
-      "id": 4,
-      "title": "Bytes Replicated (5m rate)",
-      "type": "timeseries",
-      "gridPos": { "x": 9, "y": 4, "w": 9, "h": 6 },
-      "targets": [{
-        "expr": "rate(minio_replication_sent_bytes[5m])",
-        "legendFormat": "{{dc}} bytes/s"
-      }],
+      "id": 4, "title": "Total Buckets", "type": "stat",
+      "description": "Number of buckets on this MinIO site.",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "minio_cluster_buckets_count", "legendFormat": "buckets" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps",
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
         }
       }
     },
+
     {
-      "id": 5,
-      "title": "Disk Used / Total",
-      "type": "bargauge",
-      "gridPos": { "x": 0, "y": 10, "w": 9, "h": 5 },
+      "id": 5, "title": "Total Objects", "type": "stat",
+      "description": "Total object count across all buckets.",
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "minio_cluster_objects_count", "legendFormat": "objects" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        }
+      }
+    },
+
+    {
+      "id": 6, "title": "Storage Used", "type": "stat",
+      "description": "Total bytes stored across all drives.",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "minio_node_disk_used_bytes", "legendFormat": "used" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        }
+      }
+    },
+
+    { "id": 101, "type": "row", "title": "💾 Storage & Capacity", "collapsed": false,
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 } },
+
+    {
+      "id": 10, "title": "Disk Usage % (DC1)", "type": "gauge",
+      "description": "Percentage of disk capacity used on DC1. Alert fires at 85%.",
+      "gridPos": { "x": 0, "y": 6, "w": 6, "h": 7 },
       "targets": [{
         "expr": "minio_node_disk_used_bytes / minio_node_disk_total_bytes * 100",
-        "legendFormat": "{{dc}} disk %"
+        "legendFormat": "DC1 Disk %"
       }],
-      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": true, "showThresholdMarkers": true },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
+          "unit": "percent", "min": 0, "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -112,15 +136,16 @@
         }
       }
     },
+
     {
-      "id": 6,
-      "title": "Objects in Buckets",
-      "type": "timeseries",
-      "gridPos": { "x": 9, "y": 10, "w": 9, "h": 5 },
+      "id": 11, "title": "Objects per Bucket", "type": "timeseries",
+      "description": "Object count over time, broken down by bucket. Flat lines on both sites confirm replication is working.",
+      "gridPos": { "x": 6, "y": 6, "w": 18, "h": 7 },
       "targets": [{
         "expr": "minio_bucket_objects_count",
-        "legendFormat": "{{dc}}/{{bucket}}"
+        "legendFormat": "{{bucket}}"
       }],
+      "options": { "tooltip": { "mode": "multi" } },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -128,23 +153,131 @@
         }
       }
     },
+
+    { "id": 102, "type": "row", "title": "🔄 Replication Metrics", "collapsed": false,
+      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 1 } },
+
     {
-      "id": 7,
-      "title": "S3 Request Rate",
-      "type": "timeseries",
-      "gridPos": { "x": 0, "y": 15, "w": 18, "h": 5 },
-      "targets": [
-        {
-          "expr": "rate(minio_s3_requests_total{dc=\"dc1\"}[1m])",
-          "legendFormat": "dc1 {{api}}"
-        }
-      ],
+      "id": 20, "title": "Replication Pending Objects Over Time", "type": "timeseries",
+      "description": "Objects queued but not yet replicated to the peer site. A growing queue means replication is falling behind.",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "targets": [{ "expr": "minio_replication_pending_count", "legendFormat": "Pending Objects" }],
+      "options": { "tooltip": { "mode": "multi" } },
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2, "fillOpacity": 20,
+            "thresholdsStyle": { "mode": "area" }
+          }
+        }
+      }
+    },
+
+    {
+      "id": 21, "title": "Bytes Replicated per Second", "type": "timeseries",
+      "description": "Rate of data being sent to the peer site for replication. Activity here confirms replication is live.",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(minio_replication_sent_bytes[1m])", "legendFormat": "Bytes Sent/s" },
+        { "expr": "rate(minio_replication_received_bytes[1m])", "legendFormat": "Bytes Received/s" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
           "custom": { "lineWidth": 2, "fillOpacity": 10 }
         }
       }
+    },
+
+    {
+      "id": 22, "title": "Replication Failure Rate", "type": "timeseries",
+      "description": "Any increase here means objects are failing to replicate. Investigate immediately — these are data-durability events.",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 7 },
+      "targets": [{ "expr": "increase(minio_replication_failed_count[5m])", "legendFormat": "Failures / 5m" }],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }]
+          },
+          "custom": {
+            "lineWidth": 2, "fillOpacity": 20,
+            "thresholdsStyle": { "mode": "area" }
+          }
+        }
+      }
+    },
+
+    {
+      "id": 23, "title": "Replication Latency (sent vs received)", "type": "timeseries",
+      "description": "Compare cumulative bytes sent vs received. Divergence indicates a replication backlog.",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 7 },
+      "targets": [
+        { "expr": "minio_replication_sent_bytes", "legendFormat": "Total Bytes Sent" },
+        { "expr": "minio_replication_received_bytes", "legendFormat": "Total Bytes Received" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 5 }
+        }
+      }
+    },
+
+    { "id": 103, "type": "row", "title": "📈 S3 API Traffic", "collapsed": false,
+      "gridPos": { "x": 0, "y": 29, "w": 24, "h": 1 } },
+
+    {
+      "id": 30, "title": "S3 Request Rate by Operation", "type": "timeseries",
+      "description": "Breakdown of S3 API calls by type: GET, PUT, DELETE, LIST, HEAD. Useful to understand read vs write load.",
+      "gridPos": { "x": 0, "y": 30, "w": 14, "h": 8 },
+      "targets": [
+        { "expr": "rate(minio_s3_requests_total[1m])", "legendFormat": "{{api}}" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 5 }
+        }
+      }
+    },
+
+    {
+      "id": 31, "title": "S3 Errors Rate", "type": "timeseries",
+      "description": "S3 API error responses (4xx, 5xx). Spikes indicate client errors or MinIO health issues.",
+      "gridPos": { "x": 14, "y": 30, "w": 10, "h": 8 },
+      "targets": [
+        { "expr": "rate(minio_s3_requests_errors_total[1m])", "legendFormat": "Errors/s" },
+        { "expr": "rate(minio_s3_requests_canceled_total[1m])", "legendFormat": "Canceled/s" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 15 }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Errors/s" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+        ]
+      }
     }
+
   ]
 }
