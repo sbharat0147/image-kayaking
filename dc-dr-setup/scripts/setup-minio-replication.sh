@@ -18,6 +18,11 @@ DC2_URL="http://localhost:9002"
 MINIO_USER="${MINIO_ROOT_USER:-minioadmin}"
 MINIO_PASS="${MINIO_ROOT_PASSWORD:-minioadmin}"
 
+# mc supports MC_HOST_<alias>=http://user:pass@host:port — no alias set needed.
+MC_ENVS="-e MC_HOST_minio-dc1=http://${MINIO_USER}:${MINIO_PASS}@localhost:9000 \
+         -e MC_HOST_minio-dc2=http://${MINIO_USER}:${MINIO_PASS}@localhost:9002"
+MC="docker run --rm --network host $MC_ENVS minio/mc:latest --no-color"
+
 echo "==> Waiting for DC1 MinIO to be ready..."
 until curl -sf "${DC1_URL}/minio/health/live" > /dev/null; do sleep 2; done
 echo "    DC1 OK"
@@ -26,24 +31,18 @@ echo "==> Waiting for DC2 MinIO to be ready..."
 until curl -sf "${DC2_URL}/minio/health/live" > /dev/null; do sleep 2; done
 echo "    DC2 OK"
 
-# Run all mc commands in a single container so aliases persist across commands.
-docker run --rm --network host minio/mc:latest /bin/sh -c "
-  set -e
-  mc alias set minio-dc1 ${DC1_URL} ${MINIO_USER} ${MINIO_PASS} --no-color
-  mc alias set minio-dc2 ${DC2_URL} ${MINIO_USER} ${MINIO_PASS} --no-color
+echo "==> Checking existing replication status..."
+if $MC admin replicate info minio-dc1 2>/dev/null | grep -q "Site Name"; then
+  echo "    Site replication already configured."
+  $MC admin replicate info minio-dc1
+  exit 0
+fi
 
-  if mc admin replicate info minio-dc1 --no-color 2>/dev/null | grep -q 'Site Name'; then
-    echo 'Site replication already configured.'
-    mc admin replicate info minio-dc1 --no-color
-    exit 0
-  fi
+echo "==> Enabling site replication DC1 <-> DC2..."
+$MC admin replicate add minio-dc1 minio-dc2
 
-  echo 'Enabling site replication DC1 <-> DC2...'
-  mc admin replicate add minio-dc1 minio-dc2 --no-color
-
-  echo 'Verifying...'
-  mc admin replicate info minio-dc1 --no-color
-"
+echo "==> Verifying replication status..."
+$MC admin replicate info minio-dc1
 
 echo ""
 echo "Done. MinIO site replication is active."
