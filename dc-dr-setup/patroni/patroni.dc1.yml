@@ -3,7 +3,7 @@ name: pg-dc1
 
 restapi:
   listen: 0.0.0.0:8008
-  connect_address: ${DC1_IP}:8008
+  connect_address: ${PATRONI_CONNECT_IP}:8008
 
 # Built-in Raft DCS — no external etcd/ZooKeeper needed.
 # Port 5010 must be open between DC1 and DC2.
@@ -49,7 +49,7 @@ bootstrap:
 
 postgresql:
   listen: 0.0.0.0:5432
-  connect_address: ${DC1_IP}:5432
+  connect_address: ${PATRONI_CONNECT_IP}:5432
   data_dir: /home/postgres/data
   bin_dir: /usr/lib/postgresql/16/bin
   pgpass: /tmp/pgpass

@@ -3,10 +3,9 @@ name: pg-witness
 
 restapi:
   listen: 0.0.0.0:8008
-  connect_address: ${DC1_IP}:8010
+  connect_address: ${PATRONI_CONNECT_IP}:8008
 
 # 3rd Raft voter — provides quorum when either DC1 or DC2 is down.
-# Knows about both DC1 (5010) and DC2 (5011) so it can join the cluster.
 raft:
   self_addr: 172.30.0.30:5010
   partner_addrs:
@@ -39,7 +38,7 @@ bootstrap:
 
 postgresql:
   listen: 0.0.0.0:5432
-  connect_address: ${DC1_IP}:5434
+  connect_address: ${PATRONI_CONNECT_IP}:5432
   data_dir: /home/postgres/data
   bin_dir: /usr/lib/postgresql/16/bin
   pgpass: /tmp/pgpass

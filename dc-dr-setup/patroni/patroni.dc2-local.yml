@@ -3,10 +3,9 @@ name: pg-dc2
 
 restapi:
   listen: 0.0.0.0:8008
-  connect_address: ${DC1_IP}:8009
+  connect_address: ${PATRONI_CONNECT_IP}:8008
 
-# DC2 raft on port 5011 (host), partners with DC1 on port 5010 (host).
-# Both VMs share the same IP in local-test mode (DC1_IP == DC2_IP).
+# DC2 raft on port 5010 (container), static IP 172.30.0.20 on patroni-cluster network.
 raft:
   self_addr: 172.30.0.20:5010
   partner_addrs:
@@ -39,7 +38,7 @@ bootstrap:
 
 postgresql:
   listen: 0.0.0.0:5432
-  connect_address: ${DC1_IP}:5433
+  connect_address: ${PATRONI_CONNECT_IP}:5432
   data_dir: /home/postgres/data
   bin_dir: /usr/lib/postgresql/16/bin
   pgpass: /tmp/pgpass

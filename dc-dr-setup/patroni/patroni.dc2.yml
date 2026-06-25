@@ -3,7 +3,7 @@ name: pg-dc2
 
 restapi:
   listen: 0.0.0.0:8008
-  connect_address: ${DC2_IP}:8008
+  connect_address: ${PATRONI_CONNECT_IP}:8008
 
 raft:
   self_addr: ${DC2_IP}:5010
@@ -36,7 +36,7 @@ bootstrap:
 
 postgresql:
   listen: 0.0.0.0:5432
-  connect_address: ${DC2_IP}:5432
+  connect_address: ${PATRONI_CONNECT_IP}:5432
   data_dir: /home/postgres/data
   bin_dir: /usr/lib/postgresql/16/bin
   pgpass: /tmp/pgpass

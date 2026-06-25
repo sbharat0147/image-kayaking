@@ -52,6 +52,9 @@ services:
       PATRONI_REPLICATION_PASSWORD: ${PATRONI_REPLICATION_PASSWORD}
       DC1_IP: ${DC1_IP}
       DC2_IP: ${DC2_IP}
+      # Container IP on patroni-cluster network — used as connect_address
+      # so other nodes can reach this node directly (not via 127.0.0.1).
+      PATRONI_CONNECT_IP: 172.30.0.10
 
   # ── MinIO ──────────────────────────────────────────────────────────────────
   minio:

@@ -11,6 +11,7 @@
 | [07-enterprise-test-scenarios.md](07-enterprise-test-scenarios.md) | Full test suite: S1–S9 covering all HA and DR scenarios with pass criteria |
 | [08-airgap-developer-setup.md](08-airgap-developer-setup.md) | **Developer manual** — build the airgap bundle on an internet machine, transfer and deploy on two airgap VMs, final checklist |
 | [09-tester-manual.md](09-tester-manual.md) | **Tester manual** — 23 test cases across Phase 1 (internet/local) and Phase 2 (airgap/two-VM): PostgreSQL HA, MinIO DR, monitoring alerts, MCP Server, airgap isolation |
+| [10-postgresql-concepts-and-observations.md](10-postgresql-concepts-and-observations.md) | **PostgreSQL HA concepts** for newcomers — WAL timelines, replication slots, pg_rewind, connect_address pitfall, Raft quorum; every section backed by a real observed error |
 
 ## Quick Reference
 

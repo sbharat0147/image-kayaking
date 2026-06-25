@@ -59,6 +59,7 @@ services:
       PATRONI_REPLICATION_PASSWORD: ${PATRONI_REPLICATION_PASSWORD}
       DC1_IP: ${DC1_IP}
       DC2_IP: ${DC1_IP}
+      PATRONI_CONNECT_IP: 172.30.0.20
 
   # ── Raft Witness — 3rd voter for quorum (nofailover, noloadbalance) ───────
   postgres-witness:
@@ -84,6 +85,7 @@ services:
       PATRONI_REPLICATION_PASSWORD: ${PATRONI_REPLICATION_PASSWORD}
       DC1_IP: ${DC1_IP}
       DC2_IP: ${DC1_IP}
+      PATRONI_CONNECT_IP: 172.30.0.30
 
   # ── MinIO ──────────────────────────────────────────────────────────────────
   minio:
