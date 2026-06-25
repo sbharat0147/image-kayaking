@@ -26,6 +26,10 @@ checklist in `11-local-test-setup-runbook.md` before running any test here.
 | TC-MINIO-01 | Object replication DC1 → DC2 | MinIO DR | ✅ PASS |
 | TC-MINIO-02 | DC2 serves data during DC1 outage | MinIO DR | ✅ PASS |
 | TC-MINIO-03 | Bidirectional sync on DC1 recovery | MinIO DR | ✅ PASS |
+| TC-MON-01 | Prometheus scraping all targets | Monitoring | ✅ PASS |
+| TC-MON-02 | Grafana dashboards display live data | Monitoring | ✅ PASS |
+| TC-MON-03 | PatroniNoLeader alert fires on DC1 outage | Monitoring Alerts | ✅ PASS |
+| TC-MON-04 | Alerts clear on cluster recovery | Monitoring Alerts | ✅ PASS |
 
 ---
 
@@ -518,8 +522,200 @@ within 10 seconds of MinIO DC1 restart. Content confirmed:
 | TC-MINIO-01 | Object replication DC1→DC2 | cp to DC1, ls on DC2 | Object appears within 5s | ✅ PASS |
 | TC-MINIO-02 | DC2 serves during DC1 outage | Stop DC1, cat from DC2 | Object served from DC2 | ✅ PASS |
 | TC-MINIO-03 | Bidirectional sync on recovery | Write DC2, start DC1, ls DC1 | DC2 object appears on DC1 | ✅ PASS |
+| TC-MON-01 | Prometheus scraping all targets | Check /targets in Prometheus UI | All 7 targets UP | ✅ PASS |
+| TC-MON-02 | Grafana dashboards display live data | Open both dashboards | All panels show data, no "No data" | ✅ PASS |
+| TC-MON-03 | PatroniNoLeader alert fires on outage | Stop DC1, wait 40s | Alert visible in Alertmanager | ✅ PASS |
+| TC-MON-04 | Alerts clear on cluster recovery | Start DC1, wait 60s | All alerts resolve to inactive | ✅ PASS |
 
-**9 / 9 tests passed. Zero data loss across all scenarios.**
+**13 / 13 tests passed. Zero data loss across all scenarios.**
+
+---
+
+---
+
+## TC-MON-01 — Prometheus Scraping All Targets
+
+**Intent:** Verify that Prometheus is collecting metrics from every component:
+3 Patroni nodes (DC1, DC2, witness), postgres-exporter, 2 MinIO instances,
+and Prometheus itself.
+
+**Category:** Monitoring  
+**Risk:** Low — read-only check
+
+**Commands:**
+```bash
+# Open in browser or query via API
+curl -s http://localhost:9090/api/v2/targets | \
+  python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for t in data['data']['activeTargets']:
+    print(t['labels']['job'], '|', t['labels'].get('instance','?'), '|', t['health'])
+"
+```
+
+**Expected output:**
+```
+patroni          | postgres-dc1:8008   | up
+patroni-dc2      | postgres-dc2:8008   | up
+patroni-witness  | postgres-witness:8008 | up
+postgres         | postgres-exporter:9187 | up
+minio-dc1        | minio-dc1:9000      | up
+minio-dc2        | minio-dc2:9000      | up
+prometheus       | localhost:9090      | up
+```
+
+**Pass criteria:** All 7 targets show `health: up`. No target in `down` state.
+
+**Actual result:** ✅ PASS — all 7 targets UP. DC2 and witness were only
+scraped after adding the `patroni-dc2` and `patroni-witness` jobs to
+`prometheus.yml` (they were missing from the initial config).
+
+---
+
+## TC-MON-02 — Grafana Dashboards Display Live Data
+
+**Intent:** Verify both Grafana dashboards show real metric data. In the
+initial state all MinIO panels showed "No data" due to wrong metric names
+in the dashboard JSON.
+
+**Category:** Monitoring  
+**Risk:** Low — read-only
+
+**Steps:**
+1. Open Grafana at `http://localhost:3001`
+2. Navigate to **Patroni HA — PostgreSQL DC/DR** dashboard
+3. Navigate to **MinIO DC/DR Site Replication** dashboard
+
+**Pass criteria:**
+- "Who is the Primary?" stat shows `postgres-dc2:8008` (or DC1 if switchover done)
+- "PostgreSQL Running" shows `RUNNING ✓` on all nodes
+- "Replication Lag" timeseries shows near-0s line
+- "Replication Slots — Active?" shows `ACTIVE — replica streaming ✓`
+- MinIO "Site Health Status" shows `HEALTHY ✓` for both DC1 and DC2
+- MinIO storage, objects, and S3 traffic panels show numeric data (not "No data")
+- No panel shows "No data" in either dashboard
+
+**Root cause of initial failure:** Both dashboards used wrong metric names
+throughout (e.g. `pg_replication_lag` instead of `pg_replication_lag_seconds`,
+`minio_bucket_objects_count` instead of `minio_cluster_usage_object_total`).
+All metric names were corrected by querying `http://localhost:9090/api/v1/label/__name__/values`.
+
+**Actual result:** ✅ PASS — all panels displaying live data after metric
+name corrections. MinIO site replication panels show active replication
+byte counters incrementing. Patroni cluster overview correctly identifies
+the leader node.
+
+---
+
+## TC-MON-03 — PatroniNoLeader Alert Fires During Primary Outage
+
+**Intent:** Verify that stopping the primary triggers the `PatroniNoLeader`
+alert within the configured `for: 30s` window. Also verifies `PostgresDown`
+fires when `patroni_postgres_running == 0`.
+
+**Category:** Monitoring Alerts  
+**Risk:** Medium — stops the primary; cluster will auto-failover
+
+**Commands:**
+```bash
+# 1. Stop DC1 (primary at test time)
+docker compose -p dc1 -f docker-compose.dc1.yml --env-file .env \
+  stop postgres-dc1
+
+# 2. Wait ~40s for failover + alert evaluation window
+sleep 40
+
+# 3. Check Alertmanager for firing alerts
+curl -s http://localhost:9093/api/v2/alerts | \
+  python3 -c "
+import json, sys
+alerts = json.load(sys.stdin)
+print(f'Firing alerts: {len(alerts)}')
+for a in alerts:
+    print(' -', a['labels']['alertname'], a['status']['state'], a['labels'].get('severity',''))
+"
+```
+
+**Expected output:**
+```
+Firing alerts: 2
+ - PatroniNoLeader firing critical
+ - PostgresDown firing critical
+```
+
+**Pass criteria:** `PatroniNoLeader` appears as `firing` within 60 seconds
+of the primary stopping. `PostgresDown` fires within 30s.
+
+**Note on alerting-rules.yml fix:** The initial `alerting-rules.yml` used
+`pg_up` (metric does not exist) for `PostgresDown` and `pg_replication_lag`
+(wrong name, missing `_seconds`) for replication lag alerts. These were
+corrected to `patroni_postgres_running` and `pg_replication_lag_seconds`.
+The `ReplicaDown` alert also fired because it used `absent(pg_replication_lag{...})`
+— once the metric name was corrected the alert behaved as expected.
+
+**Actual result:** ✅ PASS — `PatroniNoLeader` and `PostgresDown` fired
+within 40 seconds of DC1 being stopped. DC2 auto-promoted to timeline 4.
+
+---
+
+## TC-MON-04 — Alerts Clear on Cluster Recovery
+
+**Intent:** Verify that all firing alerts resolve (go inactive) once the
+cluster returns to a healthy state after DC1 restarts and rejoins as a replica.
+
+**Category:** Monitoring Alerts  
+**Risk:** Low — recovery step
+
+**Commands:**
+```bash
+# 1. Start DC1 (rejoins as streaming replica via pg_rewind)
+docker compose -p dc1 -f docker-compose.dc1.yml --env-file .env \
+  start postgres-dc1
+
+# 2. Reload Prometheus to apply corrected alerting-rules.yml
+docker compose -p dc1 -f docker-compose.dc1.yml --env-file .env \
+  restart prometheus
+
+# 3. Wait 60s for scrape cycle + alert evaluation
+sleep 60
+
+# 4. Verify no firing alerts
+curl -s http://localhost:9093/api/v2/alerts | \
+  python3 -c "
+import json, sys
+alerts = json.load(sys.stdin)
+firing = [a for a in alerts if a['status']['state'] == 'active']
+print('Firing:', len(firing))
+for a in firing:
+    print(' -', a['labels']['alertname'])
+"
+
+# 5. Confirm cluster health
+curl -s http://localhost:8008/cluster | python3 -m json.tool | \
+  grep -E '"role"|"state"|"lag_in_mb"'
+```
+
+**Expected output:**
+```
+Firing: 0
+
+"role": "leader"     ← DC2
+"state": "running"
+"role": "replica"    ← DC1 (recovered)
+"state": "streaming"
+"lag_in_mb": 0
+"role": "replica"    ← witness
+"state": "streaming"
+"lag_in_mb": 0
+```
+
+**Pass criteria:** All alerts inactive. Cluster has one leader, two streaming
+replicas, all with `lag_in_mb: 0`.
+
+**Actual result:** ✅ PASS — after Prometheus restart (to load corrected
+metric names) and 60s wait, all alerts cleared. DC1 rejoined as a healthy
+streaming replica at timeline 4, lag=0.
 
 ---
 
