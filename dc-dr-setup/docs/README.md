@@ -12,6 +12,7 @@
 | [08-airgap-developer-setup.md](08-airgap-developer-setup.md) | **Developer manual** — build the airgap bundle on an internet machine, transfer and deploy on two airgap VMs, final checklist |
 | [09-tester-manual.md](09-tester-manual.md) | **Tester manual** — 23 test cases across Phase 1 (internet/local) and Phase 2 (airgap/two-VM): PostgreSQL HA, MinIO DR, monitoring alerts, MCP Server, airgap isolation |
 | [10-postgresql-concepts-and-observations.md](10-postgresql-concepts-and-observations.md) | **PostgreSQL HA concepts** for newcomers — WAL timelines, replication slots, pg_rewind, connect_address pitfall, Raft quorum; every section backed by a real observed error |
+| [11-local-test-setup-runbook.md](11-local-test-setup-runbook.md) | **Local test runbook** — definitive step-by-step guide to spin up, verify, and tear down the full DC/DR stack on a single machine; includes port reference, credentials, checkpoints, failover/switchover tests, and troubleshooting table |
 
 ## Quick Reference
 
