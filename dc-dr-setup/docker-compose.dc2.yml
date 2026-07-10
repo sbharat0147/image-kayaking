@@ -6,7 +6,7 @@ networks:
     driver: bridge
 
 volumes:
-  pg_data_dc2:
+  pg_home_dc2:
   pg_raft_dc2:
   minio_data_dc2:
 
@@ -26,7 +26,7 @@ services:
       - "8008:8008"
       - "5010:5010"   # Patroni Raft peer port (must reach DC1)
     volumes:
-      - pg_data_dc2:/home/postgres/data
+      - pg_home_dc2:/home/postgres
       - pg_raft_dc2:/home/postgres/raft
       - ./patroni/patroni.dc2.yml:/etc/patroni/patroni.yml:ro
       - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro

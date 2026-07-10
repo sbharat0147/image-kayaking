@@ -4,12 +4,12 @@ set -e
 CONFIG_TEMPLATE="${1:-/etc/patroni/patroni.yml}"
 RENDERED="/tmp/patroni-rendered.yml"
 
-# Docker volumes are created as root. Fix ownership so postgres user
-# can write to the data and raft directories.
-chown -R postgres:postgres /home/postgres/ 2>/dev/null || true
+# The volume is mounted at /home/postgres (parent), not at /home/postgres/data.
+# This lets Patroni rename /home/postgres/data → /home/postgres/data.failed
+# during reinit without hitting "Device or resource busy" on a mount point.
 mkdir -p /home/postgres/raft /home/postgres/data
 chmod 700 /home/postgres/data
-chown -R postgres:postgres /home/postgres/raft /home/postgres/data
+chown -R postgres:postgres /home/postgres/
 
 # Expand ${VAR} placeholders in the patroni config template.
 # Patroni does not natively expand shell-style variables in its YAML.

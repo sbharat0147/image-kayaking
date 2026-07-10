@@ -4,17 +4,9 @@
 networks:
   dc-internal:
     driver: bridge
-  # Shared network so DC1, DC2, and witness can reach each other
-  # by container name for Raft — avoids hairpin NAT via host IP.
-  patroni-cluster:
-    name: patroni-cluster
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.30.0.0/24
 
 volumes:
-  pg_data_dc1:
+  pg_home_dc1:
   pg_raft_dc1:
   minio_data_dc1:
   prometheus_data:
@@ -31,15 +23,13 @@ services:
     container_name: postgres-dc1
     restart: unless-stopped
     networks:
-      dc-internal:
-      patroni-cluster:
-        ipv4_address: 172.30.0.10
+      - dc-internal
     ports:
       - "5432:5432"
       - "8008:8008"   # Patroni REST API
       - "5010:5010"   # Raft peer port (exposed for external tooling)
     volumes:
-      - pg_data_dc1:/home/postgres/data
+      - pg_home_dc1:/home/postgres
       - pg_raft_dc1:/home/postgres/raft
       - ./patroni/patroni.dc1.yml:/etc/patroni/patroni.yml:ro
       - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
@@ -50,9 +40,6 @@ services:
       PATRONI_REPLICATION_PASSWORD: ${PATRONI_REPLICATION_PASSWORD}
       DC1_IP: ${DC1_IP}
       DC2_IP: ${DC2_IP}
-      # Container IP on patroni-cluster network — used as connect_address
-      # so other nodes can reach this node directly (not via 127.0.0.1).
-      PATRONI_CONNECT_IP: 172.30.0.10
 
   # ── MinIO ──────────────────────────────────────────────────────────────────
   minio:
