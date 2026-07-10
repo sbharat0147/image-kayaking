@@ -6,6 +6,9 @@ networks:
     driver: bridge
 
 volumes:
+  # Volume mounted at /home/postgres (parent of data_dir), NOT at /home/postgres/data.
+  # This lets Patroni rename /home/postgres/data → /home/postgres/data.failed
+  # during reinit without hitting "Device or resource busy" on a mount point.
   pg_home_dc2:
   pg_raft_dc2:
   minio_data_dc2:
@@ -24,7 +27,7 @@ services:
     ports:
       - "5432:5432"
       - "8008:8008"
-      - "5010:5010"   # Patroni Raft peer port (must reach DC1)
+      - "5010:5010"   # Patroni Raft peer port (must reach DC1 VM)
     volumes:
       - pg_home_dc2:/home/postgres
       - pg_raft_dc2:/home/postgres/raft

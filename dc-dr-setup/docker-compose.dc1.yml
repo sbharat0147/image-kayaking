@@ -4,8 +4,19 @@
 networks:
   dc-internal:
     driver: bridge
+  # Internal overlay so DC1 containers can reach each other by name.
+  # Cross-VM Raft/replication uses host IPs via DC1_IP/DC2_IP env vars.
+  patroni-cluster:
+    name: patroni-cluster
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
 
 volumes:
+  # Volume mounted at /home/postgres (parent of data_dir), NOT at /home/postgres/data.
+  # This lets Patroni rename /home/postgres/data → /home/postgres/data.failed
+  # during reinit without hitting "Device or resource busy" on a mount point.
   pg_home_dc1:
   pg_raft_dc1:
   minio_data_dc1:
@@ -23,11 +34,13 @@ services:
     container_name: postgres-dc1
     restart: unless-stopped
     networks:
-      - dc-internal
+      dc-internal:
+      patroni-cluster:
+        ipv4_address: 172.30.0.10
     ports:
       - "5432:5432"
       - "8008:8008"   # Patroni REST API
-      - "5010:5010"   # Raft peer port (exposed for external tooling)
+      - "5010:5010"   # Raft peer port (must reach DC2 VM)
     volumes:
       - pg_home_dc1:/home/postgres
       - pg_raft_dc1:/home/postgres/raft
