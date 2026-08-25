@@ -15,8 +15,8 @@ alerting:
 
 scrape_configs:
 
-  # ── Patroni REST API — DC1 ────────────────────────────────────────────────
-  - job_name: patroni
+  # ── Patroni REST API — DC1 (same VM, container name resolves via dc-internal) ──
+  - job_name: patroni-dc1
     scrape_interval: 10s
     static_configs:
       - targets: ["postgres-dc1:8008"]
@@ -24,26 +24,16 @@ scrape_configs:
           dc: dc1
           node: pg-dc1
 
-  # ── Patroni REST API — DC2 ────────────────────────────────────────────────
+  # ── Patroni REST API — DC2 (different VM — replace DC2_IP with actual IP) ──────
   - job_name: patroni-dc2
     scrape_interval: 10s
     static_configs:
-      - targets: ["postgres-dc2:8008"]
+      - targets: ["DC2_IP_PLACEHOLDER:8008"]
         labels:
           dc: dc2
           node: pg-dc2
 
-  # ── Patroni REST API — Witness ────────────────────────────────────────────
-  - job_name: patroni-witness
-    scrape_interval: 10s
-    static_configs:
-      - targets: ["postgres-witness:8008"]
-        labels:
-          dc: dc1
-          node: pg-witness
-
-  # ── postgres_exporter ─────────────────────────────────────────────────────
-  # Exposes: pg_replication_lag_seconds, pg_database_size_bytes, pg_locks_count, etc.
+  # ── postgres_exporter ─────────────────────────────────────────────────────────
   - job_name: postgres
     static_configs:
       - targets: ["postgres-exporter:9187"]
@@ -51,7 +41,7 @@ scrape_configs:
           dc: dc1
           node: pg-dc1
 
-  # ── MinIO cluster metrics — DC1 ───────────────────────────────────────────
+  # ── MinIO cluster metrics — DC1 (same VM) ─────────────────────────────────────
   - job_name: minio-dc1
     metrics_path: /minio/v2/metrics/cluster
     static_configs:
@@ -60,16 +50,16 @@ scrape_configs:
           dc: dc1
           site: minio-dc1
 
-  # ── MinIO cluster metrics — DC2 ───────────────────────────────────────────
+  # ── MinIO cluster metrics — DC2 (different VM — replace DC2_IP with actual IP) ─
   - job_name: minio-dc2
     metrics_path: /minio/v2/metrics/cluster
     static_configs:
-      - targets: ["minio-dc2:9000"]
+      - targets: ["DC2_IP_PLACEHOLDER:9000"]
         labels:
           dc: dc2
           site: minio-dc2
 
-  # ── Prometheus self-monitoring ────────────────────────────────────────────
+  # ── Prometheus self-monitoring ────────────────────────────────────────────────
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
